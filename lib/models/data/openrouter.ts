@@ -3,6 +3,38 @@ import { ModelConfig } from "../types"
 
 export const openrouterModels: ModelConfig[] = [
   {
+    id: "openrouter:xiaomi/mimo-v2-flash:free",
+    name: "Mimo V2 Flash",
+    provider: "OpenRouter",
+    providerId: "openrouter",
+    modelFamily: "OpenRouter",
+    baseProviderId: "xiaomi",
+    description:
+      "Flagship model by Xiaomi, optimized for performance and reliability.",
+    tags: ["flagship", "performance", "reliability"],
+    contextWindow: 262144,
+    inputCost: 0,
+    outputCost: 0,
+    priceUnit: "per 1M tokens",
+    vision: false,
+    tools: false,
+    audio: false,
+    reasoning: true,
+    webSearch: false,
+    openSource: false,
+    speed: "Medium",
+    intelligence: "High",
+    website: "https://openrouter.ai/",
+    apiDocs: "https://openrouter.ai/xiaomi/mimo-v2-flash:free",
+    modelPage: "https://xiaomi.com",
+    releasedAt: "2024-04-01",
+    icon: "xiaomi",
+    apiSdk: (apiKey?: string) =>
+      createOpenRouter({
+        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
+      }).chat("xiaomi/mimo-v2-flash:free"),
+  },
+  {
     id: "openrouter:deepseek/deepseek-r1:free",
     name: "DeepSeek R1",
     provider: "OpenRouter",

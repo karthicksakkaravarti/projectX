@@ -9,7 +9,7 @@
   # Packages to install in the environment
   packages = [
     pkgs.nodejs_20
-    pkgs.nodePackages.pnpm
+    pkgs.nodePackages.npm
   ];
 
   # IDE extensions to install
@@ -28,7 +28,8 @@
       enable = true;
       previews = {
         web = {
-          command = ["npm" "run" "dev" "--" "--port" "$PORT" "--hostname" "0.0.0.0"];
+          # Install deps first, then run dev server
+          command = ["bash" "-c" "npm install && npm run dev -- --port $PORT --hostname 0.0.0.0"];
           manager = "web";
         };
       };
@@ -41,9 +42,9 @@
         install-deps = "npm install";
       };
 
-      # Runs every time the workspace is started
+      # Runs every time the workspace is started (background tasks)
       onStart = {
-        start-server = "npm run dev";
+        # Empty - dev server is handled by preview
       };
     };
   };

@@ -10,6 +10,10 @@
   packages = [
     pkgs.nodejs_22
     pkgs.nodePackages.npm
+    # Build tools for native modules
+    pkgs.gcc
+    pkgs.gnumake
+    pkgs.python3
   ];
 
   # IDE extensions to install
@@ -28,8 +32,11 @@
       enable = true;
       previews = {
         web = {
-          # Clean node_modules and reinstall to ensure native modules are built for Linux
-          command = ["bash" "-c" "rm -rf node_modules .next && npm install && npm run dev -- --port $PORT --hostname 0.0.0.0"];
+          # Full clean install and rebuild native modules for Linux
+          command = [
+            "bash" "-c" 
+            "rm -rf node_modules .next package-lock.json && npm install && npm run dev -- --port $PORT --hostname 0.0.0.0"
+          ];
           manager = "web";
         };
       };
@@ -39,8 +46,8 @@
     workspace = {
       # Runs when the workspace is first created
       onCreate = {
-        # Clean and reinstall to ensure native binaries are compiled for Linux
-        install-deps = "rm -rf node_modules .next && npm install";
+        # Full clean install for Linux environment
+        install-deps = "rm -rf node_modules .next package-lock.json && npm install";
       };
 
       # Runs every time the workspace is started (background tasks)

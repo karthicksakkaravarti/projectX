@@ -8,7 +8,7 @@
 
   # Packages to install in the environment
   packages = [
-    pkgs.nodejs_20
+    pkgs.nodejs_22
     pkgs.nodePackages.npm
   ];
 

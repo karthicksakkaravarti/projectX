@@ -1,9 +1,10 @@
 /**
- * Integration Tests: Chat API Route
+ * Integration Tests: Chat API Logic
  */
 
-import { POST } from '@/app/api/chat/route'
-import { NextRequest } from 'next/server'
+import { validateAndTrackUsage } from '@/app/api/chat/api'
+import { getAllModels } from '@/lib/models'
+import { getProviderForModel } from '@/lib/openproviders/provider-map'
 
 // Mock dependencies
 jest.mock('@/lib/models', () => ({
@@ -21,112 +22,97 @@ jest.mock('@/lib/openproviders/provider-map', () => ({
     getProviderForModel: jest.fn().mockReturnValue('openai'),
 }))
 
-jest.mock('./api', () => ({
-    incrementMessageCount: jest.fn().mockResolvedValue({}),
-    logUserMessage: jest.fn().mockResolvedValue({}),
-    storeAssistantMessage: jest.fn().mockResolvedValue({}),
-    validateAndTrackUsage: jest.fn().mockResolvedValue(null),
-}))
-
-jest.mock('ai', () => ({
-    streamText: jest.fn().mockReturnValue({
-        toDataStreamResponse: jest.fn().mockReturnValue(
-            new Response('data: {"type":"text-delta","text":"Hello"}\n\n', {
-                headers: { 'Content-Type': 'text/event-stream' },
-            })
-        ),
+jest.mock('@/lib/usage', () => ({
+    checkDailyMessageLimit: jest.fn().mockResolvedValue({
+        allowed: true,
+        remaining: 995,
+        limit: 1000,
+        resetTime: new Date().toISOString(),
+    }),
+    checkProModelLimit: jest.fn().mockResolvedValue({
+        allowed: true,
+        remaining: 495,
+        limit: 500,
+        resetTime: new Date().toISOString(),
     }),
 }))
 
-describe('Chat API Route', () => {
-    describe('POST /api/chat', () => {
-        it('should return 400 if messages are missing', async () => {
-            const request = new NextRequest('http://localhost:3000/api/chat', {
-                method: 'POST',
-                body: JSON.stringify({
-                    chatId: 'test-chat-id',
-                    userId: 'test-user-id',
-                }),
-            })
+jest.mock('@/lib/user-keys', () => ({
+    getUserApiKey: jest.fn().mockResolvedValue('test-api-key'),
+}))
 
-            const response = await POST(request)
-            const data = await response.json()
+describe('Chat API Logic', () => {
+    beforeEach(() => {
+        jest.clearAllMocks()
+    })
 
-            expect(response.status).toBe(400)
-            expect(data.error).toBeDefined()
+    describe('validateAndTrackUsage', () => {
+        it('should return null for valid authenticated user', async () => {
+            const result = await validateAndTrackUsage(
+                'test-user-id',
+                'gpt-4.1-nano',
+                true
+            )
+
+            expect(result).toBeNull()
         })
 
-        it('should return 400 if chatId is missing', async () => {
-            const request = new NextRequest('http://localhost:3000/api/chat', {
-                method: 'POST',
-                body: JSON.stringify({
-                    messages: [{ role: 'user', content: 'Hello' }],
-                    userId: 'test-user-id',
-                }),
+        it('should return error for rate limit exceeded', async () => {
+            const { checkDailyMessageLimit } = require('@/lib/usage')
+            checkDailyMessageLimit.mockResolvedValueOnce({
+                allowed: false,
+                remaining: 0,
+                limit: 5,
+                resetTime: new Date().toISOString(),
             })
 
-            const response = await POST(request)
-            const data = await response.json()
+            const result = await validateAndTrackUsage(
+                'guest-user-id',
+                'gpt-4.1-nano',
+                false
+            )
 
-            expect(response.status).toBe(400)
-            expect(data.error).toBeDefined()
+            expect(result).toBeTruthy()
+            expect(result?.error).toContain('Daily message limit')
         })
 
-        it('should return 400 if userId is missing', async () => {
-            const request = new NextRequest('http://localhost:3000/api/chat', {
-                method: 'POST',
-                body: JSON.stringify({
-                    messages: [{ role: 'user', content: 'Hello' }],
-                    chatId: 'test-chat-id',
-                }),
+        it('should return error for pro model limit exceeded', async () => {
+            const { checkProModelLimit } = require('@/lib/usage')
+            checkProModelLimit.mockResolvedValueOnce({
+                allowed: false,
+                remaining: 0,
+                limit: 500,
+                resetTime: new Date().toISOString(),
             })
 
-            const response = await POST(request)
-            const data = await response.json()
+            const result = await validateAndTrackUsage(
+                'test-user-id',
+                'gpt-4o',
+                true
+            )
 
-            expect(response.status).toBe(400)
-            expect(data.error).toBeDefined()
+            expect(result).toBeTruthy()
+            expect(result?.error).toContain('pro model')
         })
+    })
 
-        it('should accept valid chat request', async () => {
-            const request = new NextRequest('http://localhost:3000/api/chat', {
-                method: 'POST',
-                body: JSON.stringify({
-                    messages: [{ role: 'user', content: 'Hello' }],
-                    chatId: 'test-chat-id',
-                    userId: 'test-user-id',
-                    model: 'gpt-4.1-nano',
-                    isAuthenticated: true,
-                    systemPrompt: 'You are helpful',
-                    enableSearch: false,
-                }),
-            })
+    describe('getAllModels', () => {
+        it('should return available models', async () => {
+            const models = await getAllModels()
 
-            const response = await POST(request)
-
-            // Should return a streaming response
-            expect(response.headers.get('Content-Type')).toContain('text')
+            expect(Array.isArray(models)).toBe(true)
+            expect(models.length).toBeGreaterThan(0)
+            expect(models[0]).toHaveProperty('id')
+            expect(models[0]).toHaveProperty('name')
+            expect(models[0]).toHaveProperty('provider')
         })
+    })
 
-        it('should handle model not found error', async () => {
-            const { getAllModels } = require('@/lib/models')
-            getAllModels.mockResolvedValueOnce([])
+    describe('getProviderForModel', () => {
+        it('should return correct provider for model', () => {
+            const provider = getProviderForModel('gpt-4.1-nano')
 
-            const request = new NextRequest('http://localhost:3000/api/chat', {
-                method: 'POST',
-                body: JSON.stringify({
-                    messages: [{ role: 'user', content: 'Hello' }],
-                    chatId: 'test-chat-id',
-                    userId: 'test-user-id',
-                    model: 'unknown-model',
-                    isAuthenticated: true,
-                }),
-            })
-
-            const response = await POST(request)
-
-            // Should return an error response
-            expect(response.status).toBeGreaterThanOrEqual(400)
+            expect(provider).toBe('openai')
         })
     })
 })

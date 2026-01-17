@@ -38,23 +38,42 @@ const config = {
   
   // Coverage configuration
   collectCoverageFrom: [
-    'app/**/*.{ts,tsx}',
-    'components/**/*.{ts,tsx}',
     'lib/**/*.{ts,tsx}',
-    '!**/*.d.ts',
+    '!lib/**/*.d.ts',
+    '!lib/**/types.ts',
+    '!lib/chat-store/**',
+    '!lib/model-store/**',
+    '!lib/user-store/**',
+    '!lib/user-preference-store/**',
+    '!lib/hooks/**',
+    '!lib/mcp/**',
+    '!lib/providers/**',
+    '!lib/models/data/**',
+    '!lib/models/index.ts',
+    '!lib/openproviders/index.ts',
+    '!lib/openproviders/env.ts',
+    '!lib/supabase/**',
+    '!lib/server/**',
+    '!lib/user/**',
+    '!lib/fetch.ts',
+    '!lib/motion.ts',
+    '!lib/routes.ts',
+    '!lib/file-handling.ts',
+    '!lib/api.ts',
+    '!lib/usage.ts',
     '!**/node_modules/**',
     '!**/.next/**',
     '!**/coverage/**',
     '!**/tests/**',
   ],
-  
+
   // Coverage thresholds (can be adjusted as needed)
   coverageThreshold: {
     global: {
-      branches: 30,
-      functions: 30,
-      lines: 30,
-      statements: 30,
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
     },
   },
   

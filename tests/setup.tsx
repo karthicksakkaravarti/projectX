@@ -9,6 +9,15 @@ import { cleanup } from '@testing-library/react'
 // Mock environment variables
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321'
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
+process.env.ENCRYPTION_KEY = Buffer.from('a'.repeat(32)).toString('base64')
+process.env.CSRF_SECRET = 'test-csrf-secret'
+
+// Polyfill TextEncoder/TextDecoder for jsdom
+if (typeof global.TextEncoder === 'undefined') {
+    const { TextEncoder, TextDecoder } = require('util')
+    global.TextEncoder = TextEncoder
+    global.TextDecoder = TextDecoder
+}
 
 // Cleanup after each test
 afterEach(() => {

@@ -1,45 +1,67 @@
 /**
- * API Tests: Rate Limits
+ * API Tests: Rate Limits Logic
  */
 
-describe('Rate Limits API', () => {
-    const baseUrl = 'http://localhost:3000/api'
+import { checkDailyMessageLimit, checkProModelLimit } from '@/lib/usage'
 
-    describe('GET /api/rate-limits', () => {
-        it('should return rate limit info for authenticated user', async () => {
-            const response = await fetch(
-                `${baseUrl}/rate-limits?userId=test-user&isAuthenticated=true`
-            )
-            const data = await response.json()
+// Mock Supabase
+jest.mock('@/lib/supabase/server', () => ({
+    createServerClient: jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                    gte: jest.fn().mockReturnValue({
+                        maybeSingle: jest.fn().mockResolvedValue({
+                            data: { count: 5 },
+                            error: null,
+                        }),
+                    }),
+                }),
+            }),
+        }),
+    }),
+}))
 
-            expect(response.ok).toBe(true)
-            expect(data).toHaveProperty('remaining')
-            expect(data).toHaveProperty('limit')
+describe('Rate Limits Logic', () => {
+    beforeEach(() => {
+        jest.clearAllMocks()
+    })
+
+    describe('checkDailyMessageLimit', () => {
+        it('should return allowed=true when under limit', async () => {
+            const result = await checkDailyMessageLimit('test-user', true)
+
+            expect(result).toHaveProperty('allowed')
+            expect(result).toHaveProperty('remaining')
+            expect(result).toHaveProperty('limit')
+            expect(result).toHaveProperty('resetTime')
+            expect(result.allowed).toBe(true)
         })
 
-        it('should return rate limit info for guest user', async () => {
-            const response = await fetch(
-                `${baseUrl}/rate-limits?userId=guest-user&isAuthenticated=false`
-            )
-            const data = await response.json()
+        it('should have higher limit for authenticated users', async () => {
+            const authResult = await checkDailyMessageLimit('auth-user', true)
+            const guestResult = await checkDailyMessageLimit('guest-user', false)
 
-            expect(response.ok).toBe(true)
-            expect(data).toHaveProperty('remaining')
-            expect(data).toHaveProperty('limit')
+            expect(authResult.limit).toBeGreaterThan(guestResult.limit)
+        })
+    })
+
+    describe('checkProModelLimit', () => {
+        it('should return allowed=true when under pro model limit', async () => {
+            const result = await checkProModelLimit('test-user')
+
+            expect(result).toHaveProperty('allowed')
+            expect(result).toHaveProperty('remaining')
+            expect(result).toHaveProperty('limit')
+            expect(result).toHaveProperty('resetTime')
+            expect(result.allowed).toBe(true)
         })
 
-        it('should return lower limits for guest users', async () => {
-            const guestResponse = await fetch(
-                `${baseUrl}/rate-limits?userId=guest&isAuthenticated=false`
-            )
-            const guestData = await guestResponse.json()
+        it('should have a specific limit for pro models', async () => {
+            const result = await checkProModelLimit('test-user')
 
-            const authResponse = await fetch(
-                `${baseUrl}/rate-limits?userId=auth&isAuthenticated=true`
-            )
-            const authData = await authResponse.json()
-
-            expect(guestData.limit).toBeLessThan(authData.limit)
+            expect(result.limit).toBeGreaterThan(0)
+            expect(typeof result.limit).toBe('number')
         })
     })
 })

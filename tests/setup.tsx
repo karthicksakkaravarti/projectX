@@ -20,6 +20,37 @@ if (typeof global.TextEncoder === 'undefined') {
     global.TextDecoder = TextDecoder
 }
 
+// Mock indexedDB at module level so it's available during imports
+const indexedDBMock = {
+    open: jest.fn().mockReturnValue({
+        onupgradeneeded: null,
+        onsuccess: null,
+        onerror: null,
+        result: {
+            close: jest.fn(),
+            objectStoreNames: {
+                contains: jest.fn().mockReturnValue(true),
+            },
+            createObjectStore: jest.fn(),
+            version: 1,
+        },
+    }),
+    deleteDatabase: jest.fn().mockReturnValue({
+        onsuccess: null,
+        onerror: null,
+    }),
+}
+
+try {
+    Object.defineProperty(window, 'indexedDB', { value: indexedDBMock, configurable: true, writable: true })
+    // @ts-ignore
+    Object.defineProperty(global, 'indexedDB', { value: indexedDBMock, configurable: true, writable: true })
+} catch (e) {
+    // Falls back to global assignment
+    // @ts-ignore
+    global.indexedDB = indexedDBMock
+}
+
 // Cleanup after each test
 afterEach(() => {
     cleanup()
@@ -72,9 +103,6 @@ beforeAll(() => {
         key: jest.fn(),
     }
     Object.defineProperty(window, 'localStorage', { value: localStorageMock })
-
-    // Mock fetch for MSW (if using)
-    // Note: MSW will be set up separately if needed
 })
 
 // Reset mocks after all tests
@@ -82,11 +110,10 @@ afterAll(() => {
     jest.restoreAllMocks()
 })
 
-// Suppress console errors during tests (optional)
+// Suppress console errors during tests
 const originalError = console.error
 beforeAll(() => {
     console.error = (...args: unknown[]) => {
-        // Filter out known React warnings in tests
         const message = args[0]?.toString() || ''
         if (
             message.includes('Warning: ReactDOM.render is no longer supported') ||
@@ -121,10 +148,8 @@ jest.mock('next/navigation', () => ({
 // Mock next/image
 jest.mock('next/image', () => ({
     __esModule: true,
-    // eslint-disable-next-line @next/next/no-img-element
     default: function MockImage(props: { src?: string; alt?: string;[key: string]: unknown }) {
-        // eslint-disable-next-line jsx-a11y/alt-text
-        return <img {...props} />
+        // eslint-disable-next-line @next/next/no-img-element
+        return <img {...props} alt={props.alt || ''} />
     },
 }))
-

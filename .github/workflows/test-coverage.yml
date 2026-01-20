@@ -1,0 +1,254 @@
+name: Test and Coverage
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  test:
+    name: Run Tests with Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        continue-on-error: false
+
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            coverage/
+            coverage/lcov.info
+            coverage/coverage-summary.json
+          retention-days: 30
+
+      - name: Generate coverage summary
+        id: coverage-summary
+        if: always()
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "Coverage summary generated"
+
+            # Extract coverage percentages
+            COVERAGE=$(cat coverage/coverage-summary.json)
+
+            # Parse total coverage using node
+            node -e "
+            const coverage = $(cat coverage/coverage-summary.json);
+            const total = coverage.total;
+            console.log('LINES=' + total.lines.pct);
+            console.log('STATEMENTS=' + total.statements.pct);
+            console.log('FUNCTIONS=' + total.functions.pct);
+            console.log('BRANCHES=' + total.branches.pct);
+            " >> $GITHUB_OUTPUT
+          else
+            echo "No coverage summary found"
+          fi
+
+      - name: Comment PR with coverage
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request' && always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+
+            let coverageComment = '## 📊 Test Coverage Report\n\n';
+
+            try {
+              if (fs.existsSync('coverage/coverage-summary.json')) {
+                const coverageData = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+                const total = coverageData.total;
+
+                // Function to get status emoji
+                const getStatus = (pct) => {
+                  if (pct >= 80) return '✅';
+                  if (pct >= 60) return '⚠️';
+                  return '❌';
+                };
+
+                // Function to get color
+                const getColor = (pct) => {
+                  if (pct >= 80) return '🟢';
+                  if (pct >= 60) return '🟡';
+                  return '🔴';
+                };
+
+                coverageComment += '| Metric | Coverage | Status |\n';
+                coverageComment += '|--------|----------|--------|\n';
+                coverageComment += `| Lines | ${total.lines.pct}% (${total.lines.covered}/${total.lines.total}) | ${getColor(total.lines.pct)} ${getStatus(total.lines.pct)} |\n`;
+                coverageComment += `| Statements | ${total.statements.pct}% (${total.statements.covered}/${total.statements.total}) | ${getColor(total.statements.pct)} ${getStatus(total.statements.pct)} |\n`;
+                coverageComment += `| Functions | ${total.functions.pct}% (${total.functions.covered}/${total.functions.total}) | ${getColor(total.functions.pct)} ${getStatus(total.functions.pct)} |\n`;
+                coverageComment += `| Branches | ${total.branches.pct}% (${total.branches.covered}/${total.branches.total}) | ${getColor(total.branches.pct)} ${getStatus(total.branches.pct)} |\n`;
+
+                coverageComment += '\n### 📈 Coverage Threshold: 80%\n\n';
+
+                const allPassed = total.lines.pct >= 80 &&
+                                 total.statements.pct >= 80 &&
+                                 total.functions.pct >= 80 &&
+                                 total.branches.pct >= 80;
+
+                if (allPassed) {
+                  coverageComment += '✅ All coverage thresholds met!\n';
+                } else {
+                  coverageComment += '⚠️ Some coverage thresholds not met. Please add more tests.\n';
+                }
+              } else {
+                coverageComment += '❌ No coverage data available\n';
+              }
+            } catch (error) {
+              coverageComment += `⚠️ Error reading coverage data: ${error.message}\n`;
+            }
+
+            coverageComment += '\n---\n';
+            coverageComment += `📁 [Download detailed coverage report](${context.payload.repository.html_url}/actions/runs/${context.runId})\n`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('📊 Test Coverage Report')
+            );
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: coverageComment
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: coverageComment
+              });
+            }
+
+      # Optional: Upload to Codecov
+      # Uncomment if you want to use Codecov for coverage tracking
+      # - name: Upload to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     files: ./coverage/lcov.info
+      #     flags: unittests
+      #     name: codecov-umbrella
+      #     fail_ci_if_error: false
+
+      # Optional: Upload to Coveralls
+      # Uncomment if you want to use Coveralls for coverage tracking
+      # - name: Upload to Coveralls
+      #   uses: coverallsapp/github-action@v2
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     path-to-lcov: ./coverage/lcov.info
+
+      - name: Check coverage thresholds
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "Checking coverage thresholds..."
+            node -e "
+            const coverage = require('./coverage/coverage-summary.json');
+            const total = coverage.total;
+            const threshold = 80;
+
+            console.log('\n📊 Coverage Summary:');
+            console.log('====================');
+            console.log('Lines:      ' + total.lines.pct + '%');
+            console.log('Statements: ' + total.statements.pct + '%');
+            console.log('Functions:  ' + total.functions.pct + '%');
+            console.log('Branches:   ' + total.branches.pct + '%');
+            console.log('====================\n');
+
+            const failures = [];
+            if (total.lines.pct < threshold) failures.push('Lines: ' + total.lines.pct + '%');
+            if (total.statements.pct < threshold) failures.push('Statements: ' + total.statements.pct + '%');
+            if (total.functions.pct < threshold) failures.push('Functions: ' + total.functions.pct + '%');
+            if (total.branches.pct < threshold) failures.push('Branches: ' + total.branches.pct + '%');
+
+            if (failures.length > 0) {
+              console.error('❌ Coverage threshold not met for:');
+              failures.forEach(f => console.error('  - ' + f));
+              process.exit(1);
+            } else {
+              console.log('✅ All coverage thresholds met!');
+            }
+            "
+          else
+            echo "❌ No coverage summary found"
+            exit 1
+          fi
+
+  # E2E Tests (Playwright) - Optional
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        continue-on-error: true
+
+      - name: Upload E2E test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload E2E test videos
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-videos
+          path: test-results/
+          retention-days: 30

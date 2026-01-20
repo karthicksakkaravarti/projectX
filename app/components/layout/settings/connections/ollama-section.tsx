@@ -8,14 +8,16 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
 import { useState } from "react"
 
+import { isLocalhost } from "@/lib/utils"
+
 export function OllamaSection() {
   const [ollamaEndpoint, setOllamaEndpoint] = useState("http://localhost:11434")
   const [enableOllama, setEnableOllama] = useState(true) // Default enabled in dev
   const [isLoading, setIsLoading] = useState(false)
 
   // In client-side, we assume development mode (Ollama enabled) unless it's a production build
-  const isLocked =
-    typeof window !== "undefined" && window.location.hostname !== "localhost"
+  // We use isLocalhost() to determine if we are in a local environment
+  const isLocked = !isLocalhost()
 
   const testConnection = async () => {
     if (!ollamaEndpoint) return

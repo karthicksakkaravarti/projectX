@@ -36,6 +36,34 @@
             "request": "launch",
             "command": "npm run build && npm run start",
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Jest: Run All Tests",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm test",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Jest: Run Current File",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm test -- ${relativeFile}",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Jest: Coverage Report Only",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm test -- --coverage --silent 2>/dev/null",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Jest: Coverage (Summary Table)",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm test -- --coverage --coverageReporters=text-summary --silent 2>/dev/null",
+            "cwd": "${workspaceFolder}"
         }
     ],
     "compounds": [

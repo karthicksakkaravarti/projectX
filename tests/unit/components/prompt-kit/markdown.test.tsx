@@ -1,125 +1,62 @@
 /**
- * Unit Tests: components/prompt-kit/markdown.tsx
- * 
- * Note: The Markdown component uses react-markdown which uses ESM modules.
- * These tests verify the expected markdown parsing behavior without importing
- * the component directly to avoid ESM compatibility issues in Jest.
+ * Unit Tests: Markdown Component
  */
 
-import { marked } from 'marked'
+import React from 'react'
+import { render, screen } from '@testing-library/react'
+import { Markdown } from '@/components/prompt-kit/markdown'
 
-describe('Markdown Component Logic', () => {
-    describe('parseMarkdownIntoBlocks logic', () => {
-        // This replicates the parseMarkdownIntoBlocks function logic
-        function parseMarkdownIntoBlocks(markdown: string): string[] {
-            const tokens = marked.lexer(markdown)
-            return tokens.map((token) => token.raw)
-        }
+// Mock the ESM dependencies to avoid Jest issues
+jest.mock('react-markdown', () => ({
+    __esModule: true,
+    default: ({ children, components }: any) => {
+        // We can simulate some basic rendering or use the components if provided
+        // For testing purposes, we just render the raw children in a div, 
+        // effectively stripping markdown processing but verifying the component flow.
 
-        it('should parse single paragraph', () => {
-            const blocks = parseMarkdownIntoBlocks('Hello World')
-            expect(blocks.length).toBeGreaterThan(0)
-        })
+        // If code component is used in Markdown.tsx, we can't easily simulate it here 
+        // without complex mocking, so we just render text.
+        return <div data-testid="react-markdown">{children}</div>
+    }
+}))
 
-        it('should parse multiple blocks', () => {
-            const content = `# Heading
+jest.mock('remark-gfm', () => ({}))
+jest.mock('remark-breaks', () => ({}))
+jest.mock('marked', () => ({
+    marked: {
+        lexer: (text: string) => [{ raw: text }] // Simple mock to return the text as a single block
+    }
+}))
 
-Paragraph text.
+// Mock other components used inside Markdown
+jest.mock('@/app/components/chat/link-markdown', () => ({
+    LinkMarkdown: ({ children }: any) => <a>{children}</a>
+}))
 
-- List item`
-            const blocks = parseMarkdownIntoBlocks(content)
-            expect(blocks.length).toBeGreaterThan(1)
-        })
+jest.mock('@/components/prompt-kit/code-block', () => ({
+    CodeBlock: ({ children }: any) => <div>{children}</div>,
+    CodeBlockGroup: ({ children }: any) => <div>{children}</div>,
+    CodeBlockCode: ({ code }: any) => <code>{code}</code>
+}))
 
-        it('should handle empty string', () => {
-            const blocks = parseMarkdownIntoBlocks('')
-            expect(blocks).toEqual([])
-        })
+jest.mock('@/components/common/button-copy', () => ({
+    ButtonCopy: () => <button>Copy</button>
+}))
+
+describe('Markdown Component', () => {
+    it('should render markdown content', () => {
+        render(<Markdown># Hello World</Markdown>)
+        expect(screen.getByTestId('react-markdown')).toHaveTextContent('# Hello World')
     })
 
-    describe('extractLanguage logic', () => {
-        // This replicates the extractLanguage function logic
-        function extractLanguage(className?: string): string {
-            if (!className) return 'plaintext'
-            const match = className.match(/language-(\w+)/)
-            return match ? match[1] : 'plaintext'
-        }
-
-        it('should extract language from className', () => {
-            expect(extractLanguage('language-javascript')).toBe('javascript')
-            expect(extractLanguage('language-python')).toBe('python')
-            expect(extractLanguage('language-tsx')).toBe('tsx')
-        })
-
-        it('should return plaintext for no className', () => {
-            expect(extractLanguage()).toBe('plaintext')
-            expect(extractLanguage(undefined)).toBe('plaintext')
-        })
-
-        it('should return plaintext for non-matching className', () => {
-            expect(extractLanguage('some-other-class')).toBe('plaintext')
-        })
-    })
-
-    describe('Markdown parsing', () => {
-        it('should parse headings', () => {
-            const tokens = marked.lexer('# Heading 1')
-            expect(tokens.some(t => t.type === 'heading')).toBe(true)
-        })
-
-        it('should parse paragraphs', () => {
-            const tokens = marked.lexer('Regular paragraph text.')
-            expect(tokens.some(t => t.type === 'paragraph')).toBe(true)
-        })
-
-        it('should parse code blocks', () => {
-            const tokens = marked.lexer('```js\nconst x = 1;\n```')
-            expect(tokens.some(t => t.type === 'code')).toBe(true)
-        })
-
-        it('should parse lists', () => {
-            const tokens = marked.lexer('- Item 1\n- Item 2')
-            expect(tokens.some(t => t.type === 'list')).toBe(true)
-        })
-
-        it('should parse blockquotes', () => {
-            const tokens = marked.lexer('> Quote text')
-            expect(tokens.some(t => t.type === 'blockquote')).toBe(true)
-        })
-
-        it('should parse horizontal rules', () => {
-            const tokens = marked.lexer('---')
-            expect(tokens.some(t => t.type === 'hr')).toBe(true)
-        })
-
-        it('should parse tables', () => {
-            const tableMarkdown = `| Header 1 | Header 2 |
-|----------|----------|
-| Cell 1   | Cell 2   |`
-            const tokens = marked.lexer(tableMarkdown)
-            expect(tokens.some(t => t.type === 'table')).toBe(true)
-        })
-    })
-
-    describe('Component design expectations', () => {
-        it('should export a Markdown component', () => {
-            // The component accepts these props
-            const expectedProps = ['children', 'id', 'className', 'components']
-            expectedProps.forEach(prop => {
-                expect(typeof prop).toBe('string')
-            })
-        })
-
-        it('should support custom component overrides', () => {
-            // Custom components should override default renderers
-            const customizable = true
-            expect(customizable).toBe(true)
-        })
-
-        it('should memoize for performance', () => {
-            // The component should be memoized
-            const isMemoized = true
-            expect(isMemoized).toBe(true)
-        })
+    it('should handle complex content', () => {
+        const content = `
+        # Title
+        
+        - Item 1
+        - Item 2
+        `
+        render(<Markdown>{content}</Markdown>)
+        expect(screen.getByTestId('react-markdown')).toHaveTextContent('Title')
     })
 })

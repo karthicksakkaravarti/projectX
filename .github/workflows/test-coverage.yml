@@ -86,14 +86,14 @@ jobs:
 
                 // Function to get status emoji
                 const getStatus = (pct) => {
-                  if (pct >= 80) return '✅';
-                  if (pct >= 60) return '⚠️';
+                  if (pct >= 70) return '✅';
+                  if (pct >= 70) return '⚠️';
                   return '❌';
                 };
 
                 // Function to get color
                 const getColor = (pct) => {
-                  if (pct >= 80) return '🟢';
+                  if (pct >= 70) return '🟢';
                   if (pct >= 60) return '🟡';
                   return '🔴';
                 };

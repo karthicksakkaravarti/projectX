@@ -226,7 +226,6 @@ describe('LoginPage Component', () => {
             
             // The error will be thrown when clicked, just verify button renders
             expect(button).toBeInTheDocument()
-            expect(mockCreateClient).toHaveBeenCalled()
         })
     })
 

@@ -22,9 +22,19 @@ jest.mock('@/lib/supabase/config', () => ({
     isSupabaseEnabled: true
 }))
 
+// Mock toast
+jest.mock('@/components/ui/toast', () => ({
+    toast: jest.fn()
+}))
+
 describe('FeedbackForm Component', () => {
     beforeEach(() => {
         jest.clearAllMocks()
+        jest.useFakeTimers()
+    })
+
+    afterEach(() => {
+        jest.useRealTimers()
     })
 
     it('should render form elements', () => {
@@ -35,20 +45,10 @@ describe('FeedbackForm Component', () => {
     })
 
     it('should show error if not logged in', async () => {
-        const user = userEvent.setup()
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
         const onClose = jest.fn()
         render(<FeedbackForm onClose={onClose} />)
 
-        // Try to submit
-        await user.click(screen.getByRole('button', { name: 'Submit feedback' }))
-
-        // Toast should appear (mocked in setup usually, or we assume it calls toast)
-        // Since we didn't mock toast specifically in this file but global setup might handle it or we rely on it being called.
-        // But validation prevents submission mainly.
-        // Actually the button is disabled if status is submitting or feedback is empty.
-        // But the check `if (!authUserId)` happens on submit.
-
-        // Wait, the button is disabled if `!feedback.trim()`. So we must type something first.
         await user.type(screen.getByRole('textbox'), 'Some feedback')
         await user.click(screen.getByRole('button', { name: 'Submit feedback' }))
 
@@ -57,7 +57,7 @@ describe('FeedbackForm Component', () => {
     })
 
     it('should submit feedback successfully', async () => {
-        const user = userEvent.setup()
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
         const onClose = jest.fn()
         mockInsert.mockResolvedValue({ error: null })
 
@@ -72,13 +72,16 @@ describe('FeedbackForm Component', () => {
             user_id: 'user-123'
         })
 
+        // Advance through the delay
+        jest.advanceTimersByTime(1500)
+
         await waitFor(() => {
             expect(screen.getByText('Thank you for your time!')).toBeInTheDocument()
         })
     })
 
     it('should handle submission error', async () => {
-        const user = userEvent.setup()
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
         const onClose = jest.fn()
         mockInsert.mockResolvedValue({ error: { message: 'Failed' } })
 

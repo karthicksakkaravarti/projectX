@@ -85,8 +85,9 @@ describe('Auth Callback Route', () => {
             expect(mockRedirect).toHaveBeenCalledWith(
                 expect.stringContaining('/auth/error?message=')
             )
+            // URL-encoded message
             expect(mockRedirect).toHaveBeenCalledWith(
-                expect.stringContaining('Supabase is not enabled')
+                expect.stringMatching(/Supabase.*not.*enabled/i)
             )
         })
 
@@ -121,8 +122,9 @@ describe('Auth Callback Route', () => {
             expect(mockRedirect).toHaveBeenCalledWith(
                 expect.stringContaining('/auth/error?message=')
             )
+            // URL-encoded message
             expect(mockRedirect).toHaveBeenCalledWith(
-                expect.stringContaining('Missing authentication code')
+                expect.stringMatching(/Missing.*authentication.*code/i)
             )
         })
 
@@ -130,8 +132,9 @@ describe('Auth Callback Route', () => {
             const request = mockRequest({ code: '' })
             await GET(request)
 
+            // URL-encoded message
             expect(mockRedirect).toHaveBeenCalledWith(
-                expect.stringContaining('Missing authentication code')
+                expect.stringMatching(/Missing.*authentication.*code/i)
             )
         })
     })
@@ -287,7 +290,7 @@ describe('Auth Callback Route', () => {
             await GET(request)
 
             expect(mockRedirect).toHaveBeenCalledWith(
-                expect.stringContaining('Missing user info')
+                expect.stringMatching(/Missing.*user.*info/i)
             )
         })
 
@@ -304,7 +307,7 @@ describe('Auth Callback Route', () => {
             await GET(request)
 
             expect(mockRedirect).toHaveBeenCalledWith(
-                expect.stringContaining('Missing user info')
+                expect.stringMatching(/Missing.*user.*info/i)
             )
         })
 
@@ -321,7 +324,7 @@ describe('Auth Callback Route', () => {
             await GET(request)
 
             expect(mockRedirect).toHaveBeenCalledWith(
-                expect.stringContaining('Missing user info')
+                expect.stringMatching(/Missing.*user.*info/i)
             )
         })
     })

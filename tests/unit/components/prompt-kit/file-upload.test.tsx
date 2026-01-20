@@ -3,8 +3,7 @@
  */
 
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, fireEvent } from '@testing-library/react'
 import {
     FileUpload,
     FileUploadTrigger,
@@ -23,7 +22,6 @@ describe('FileUpload Component', () => {
     })
 
     it('should trigger file selection on click', async () => {
-        const user = userEvent.setup()
         const handleFiles = jest.fn()
         render(
             <FileUpload onFilesAdded={handleFiles}>
@@ -31,14 +29,19 @@ describe('FileUpload Component', () => {
             </FileUpload>
         )
 
-        const file = new File(['hello'], 'hello.png', { type: 'image/png' })
         const input = document.querySelector('input[type="file"]') as HTMLInputElement
+        expect(input).toBeInTheDocument()
 
-        // Simulating user upload
-        await user.upload(input, file)
+        // Create a mock file and set it on input
+        const file = new File(['hello'], 'hello.png', { type: 'image/png' })
 
-        expect(input.files?.[0]).toBe(file)
-        expect(input.files).toHaveLength(1)
+        // Trigger change event with files
+        Object.defineProperty(input, 'files', {
+            value: [file],
+            writable: false
+        })
+        fireEvent.change(input)
+
         expect(handleFiles).toHaveBeenCalled()
     })
 
@@ -53,7 +56,7 @@ describe('FileUpload Component', () => {
         // Drag and drop is hard to fully simulate with dataTransfer in JSDOM/RTL easily without helpers
         // But we can trigger event listeners if we knew where they are attached (window).
 
-        // Let's at least check that FileUploadContent is not visible initially
+        // Check that FileUploadContent is not visible initially
         expect(screen.queryByText('Drop Here')).not.toBeInTheDocument()
 
         // Trigger drag enter on window

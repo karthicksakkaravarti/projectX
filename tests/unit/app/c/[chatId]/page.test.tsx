@@ -46,6 +46,7 @@ jest.mock('next/navigation', () => ({
 // Import mocks after mocking
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import * as supabaseConfig from '@/lib/supabase/config'
 
 const mockCreateClient = createClient as jest.MockedFunction<typeof createClient>
 const mockRedirect = redirect as jest.MockedFunction<typeof redirect>
@@ -153,7 +154,7 @@ describe('Chat Page [chatId]', () => {
         })
 
         it('should not check authentication when Supabase is disabled', async () => {
-            jest.spyOn(supabaseConfig, 'isSupabaseEnabled', 'get').mockReturnValue(false)
+            mockIsSupabaseEnabled = false
 
             await Page()
 

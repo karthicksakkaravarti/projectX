@@ -1,30 +1,63 @@
 /**
- * Unit Tests: app/page.tsx
- * 
- * Note: The main page component has complex dependencies that require
- * mocking the entire component tree. These tests verify the expected behavior.
+ * Tests for app/page.tsx (Home page)
  */
 
-describe('Main Page', () => {
-    describe('Page structure', () => {
-        it('should be the default export', () => {
-            // The page should export a default component
-            const expectedExport = 'default'
-            expect(expectedExport).toBe('default')
-        })
-    })
+import { render, screen } from '@testing-library/react'
 
-    describe('Page content', () => {
-        it('should render chat interface', () => {
-            // The page renders a Chat component
-            const hasChat = true
-            expect(hasChat).toBe(true)
-        })
+// Mock the child components
+jest.mock('@/app/components/chat/chat-container', () => ({
+  ChatContainer: () => <div data-testid="chat-container">Chat Container</div>,
+}))
 
-        it('should be a server component with metadata', () => {
-            // Next.js pages can define metadata
-            const supportsMetadata = true
-            expect(supportsMetadata).toBe(true)
-        })
-    })
+jest.mock('@/app/components/layout/layout-app', () => ({
+  LayoutApp: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="layout-app">{children}</div>
+  ),
+}))
+
+jest.mock('@/lib/chat-store/messages/provider', () => ({
+  MessagesProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="messages-provider">{children}</div>
+  ),
+}))
+
+import Home from '@/app/page'
+
+describe('Home Page', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('should render MessagesProvider', () => {
+    render(<Home />)
+
+    expect(screen.getByTestId('messages-provider')).toBeInTheDocument()
+  })
+
+  it('should render LayoutApp inside MessagesProvider', () => {
+    render(<Home />)
+
+    const messagesProvider = screen.getByTestId('messages-provider')
+    const layoutApp = screen.getByTestId('layout-app')
+
+    expect(messagesProvider).toContainElement(layoutApp)
+  })
+
+  it('should render ChatContainer inside LayoutApp', () => {
+    render(<Home />)
+
+    const layoutApp = screen.getByTestId('layout-app')
+    const chatContainer = screen.getByTestId('chat-container')
+
+    expect(layoutApp).toContainElement(chatContainer)
+  })
+
+  it('should render complete component hierarchy', () => {
+    render(<Home />)
+
+    // Verify the full hierarchy: MessagesProvider > LayoutApp > ChatContainer
+    expect(screen.getByTestId('messages-provider')).toBeInTheDocument()
+    expect(screen.getByTestId('layout-app')).toBeInTheDocument()
+    expect(screen.getByTestId('chat-container')).toBeInTheDocument()
+  })
 })

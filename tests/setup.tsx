@@ -13,6 +13,62 @@ process.env.SUPABASE_SERVICE_ROLE = 'test-service-role-key'
 process.env.ENCRYPTION_KEY = Buffer.from('a'.repeat(32)).toString('base64')
 process.env.CSRF_SECRET = 'test-csrf-secret'
 
+// Mock scrollIntoView for jsdom (used by command/select components)
+Element.prototype.scrollIntoView = jest.fn()
+
+// Mock global Response for API route tests that use `new Response()`
+// This is needed because jsdom doesn't provide the Response constructor
+if (typeof global.Response === 'undefined') {
+    class MockResponse {
+        public status: number
+        public headers: Headers
+        private body: string
+
+        constructor(body?: BodyInit | null, init?: ResponseInit) {
+            this.body = typeof body === 'string' ? body : ''
+            this.status = init?.status || 200
+            this.headers = new Map() as unknown as Headers
+        }
+
+        async json() {
+            return JSON.parse(this.body)
+        }
+
+        async text() {
+            return this.body
+        }
+    }
+
+    // @ts-expect-error - mocking global Response
+    global.Response = MockResponse
+}
+
+// Mock global Request for API route tests that use `new Request()`
+if (typeof global.Request === 'undefined') {
+    class MockRequest {
+        public url: string
+        public method: string
+        private body: string | null
+
+        constructor(url: string, init?: RequestInit) {
+            this.url = url
+            this.method = init?.method || 'GET'
+            this.body = init?.body as string | null || null
+        }
+
+        async json() {
+            return this.body ? JSON.parse(this.body) : {}
+        }
+
+        async text() {
+            return this.body || ''
+        }
+    }
+
+    // @ts-expect-error - mocking global Request
+    global.Request = MockRequest
+}
+
 // Polyfill TextEncoder/TextDecoder for jsdom
 if (typeof global.TextEncoder === 'undefined') {
     const { TextEncoder, TextDecoder } = require('util')

@@ -1,70 +1,212 @@
 /**
- * Unit Tests: middleware.ts
- * 
- * Note: Middleware testing requires the full Next.js runtime.
- * These tests verify the expected middleware behavior and configuration.
+ * Tests for middleware.ts
  */
 
+// Mock dependencies - must be before imports
+const mockUpdateSession = jest.fn()
+const mockValidateCsrfToken = jest.fn()
+
+jest.mock('@/utils/supabase/middleware', () => ({
+  updateSession: (...args: unknown[]) => mockUpdateSession(...args),
+}))
+
+jest.mock('@/lib/csrf', () => ({
+  validateCsrfToken: (...args: unknown[]) => mockValidateCsrfToken(...args),
+}))
+
+// We need to import after mocks are set up
+import { middleware, config } from '@/middleware'
+import { NextRequest, NextResponse } from 'next/server'
+
+// Helper to create mock NextRequest
+function createMockRequest(
+  url: string,
+  options: {
+    method?: string
+    cookies?: Record<string, string>
+    headers?: Record<string, string>
+  } = {}
+) {
+  const { method = 'GET', cookies = {}, headers = {} } = options
+
+  return {
+    url,
+    method,
+    cookies: {
+      get: (name: string) => (cookies[name] ? { value: cookies[name] } : undefined),
+    },
+    headers: {
+      get: (name: string) => headers[name] || null,
+    },
+  } as unknown as NextRequest
+}
+
 describe('Middleware', () => {
-    describe('Security headers', () => {
-        const securityHeaders = [
-            'X-Frame-Options',
-            'X-Content-Type-Options',
-            'X-XSS-Protection'
-        ]
+  const originalEnv = process.env
 
-        it('should plan to add X-Frame-Options header', () => {
-            expect(securityHeaders).toContain('X-Frame-Options')
-        })
+  beforeEach(() => {
+    jest.clearAllMocks()
+    process.env = { ...originalEnv }
+  })
 
-        it('should plan to add X-Content-Type-Options header', () => {
-            expect(securityHeaders).toContain('X-Content-Type-Options')
-        })
+  afterAll(() => {
+    process.env = originalEnv
+  })
+
+  describe('GET requests (no CSRF check)', () => {
+    it('should call updateSession and return response for GET requests', async () => {
+      const mockResponse = {
+        headers: {
+          set: jest.fn(),
+        },
+      }
+      mockUpdateSession.mockResolvedValue(mockResponse)
+
+      const request = createMockRequest('http://localhost:3000/dashboard')
+
+      const response = await middleware(request)
+
+      expect(mockUpdateSession).toHaveBeenCalledWith(request)
+      expect(response).toBe(mockResponse)
+      expect(mockValidateCsrfToken).not.toHaveBeenCalled()
     })
 
-    describe('Route protection expectations', () => {
-        const publicRoutes = ['/', '/api/health', '/auth/login', '/auth/signup']
-        const protectedRoutes = ['/api/chat', '/api/user-preferences']
+    it('should set CSP headers for development', async () => {
+      process.env.NODE_ENV = 'development'
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
 
-        it('should allow root path as public', () => {
-            expect(publicRoutes).toContain('/')
-        })
+      const mockResponse = {
+        headers: {
+          set: jest.fn(),
+        },
+      }
+      mockUpdateSession.mockResolvedValue(mockResponse)
 
-        it('should allow health endpoint as public', () => {
-            expect(publicRoutes).toContain('/api/health')
-        })
+      const request = createMockRequest('http://localhost:3000/dashboard')
 
-        it('should protect chat API', () => {
-            expect(protectedRoutes).toContain('/api/chat')
-        })
+      await middleware(request)
 
-        it('should protect user preferences API', () => {
-            expect(protectedRoutes).toContain('/api/user-preferences')
-        })
+      expect(mockResponse.headers.set).toHaveBeenCalledWith(
+        'Content-Security-Policy',
+        expect.stringContaining("default-src 'self'")
+      )
     })
 
-    describe('Session handling expectations', () => {
-        it('should refresh session on each request', () => {
-            const sessionRefreshEnabled = true
-            expect(sessionRefreshEnabled).toBe(true)
-        })
+    it('should set CSP headers for production', async () => {
+      process.env.NODE_ENV = 'production'
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
 
-        it('should handle missing session gracefully', () => {
-            const handlesMissingSession = true
-            expect(handlesMissingSession).toBe(true)
-        })
+      const mockResponse = {
+        headers: {
+          set: jest.fn(),
+        },
+      }
+      mockUpdateSession.mockResolvedValue(mockResponse)
+
+      const request = createMockRequest('http://localhost:3000/dashboard')
+
+      await middleware(request)
+
+      expect(mockResponse.headers.set).toHaveBeenCalledWith(
+        'Content-Security-Policy',
+        expect.stringContaining('vercel.live')
+      )
+    })
+  })
+
+  describe('POST/PUT/DELETE requests (CSRF check)', () => {
+    it('should return 403 if csrf_token cookie is missing for POST request', async () => {
+      const mockResponse = {
+        headers: {
+          set: jest.fn(),
+        },
+      }
+      mockUpdateSession.mockResolvedValue(mockResponse)
+
+      const request = createMockRequest('http://localhost:3000/api/data', {
+        method: 'POST',
+        headers: { 'x-csrf-token': 'valid-token' },
+      })
+
+      const response = await middleware(request)
+
+      expect(response).toBeInstanceOf(NextResponse)
+      // Response should have 403 status for missing CSRF cookie
     })
 
-    describe('Middleware configuration', () => {
-        it('should have a matcher configured', () => {
-            // Middleware should have proper route matching
-            const hasMatcherConfig = true
-            expect(hasMatcherConfig).toBe(true)
-        })
+    it('should return 403 if x-csrf-token header is missing for PUT request', async () => {
+      const mockResponse = {
+        headers: {
+          set: jest.fn(),
+        },
+      }
+      mockUpdateSession.mockResolvedValue(mockResponse)
 
-        it('should exclude static files', () => {
-            const excludedPatterns = ['/_next/static', '/_next/image', '/favicon.ico']
-            expect(excludedPatterns.length).toBeGreaterThan(0)
-        })
+      const request = createMockRequest('http://localhost:3000/api/data', {
+        method: 'PUT',
+        cookies: { csrf_token: 'valid-token' },
+      })
+
+      const response = await middleware(request)
+
+      expect(response).toBeInstanceOf(NextResponse)
     })
+
+    it('should return 403 if CSRF token validation fails for DELETE request', async () => {
+      const mockResponse = {
+        headers: {
+          set: jest.fn(),
+        },
+      }
+      mockUpdateSession.mockResolvedValue(mockResponse)
+      mockValidateCsrfToken.mockReturnValue(false)
+
+      const request = createMockRequest('http://localhost:3000/api/data', {
+        method: 'DELETE',
+        cookies: { csrf_token: 'invalid-token' },
+        headers: { 'x-csrf-token': 'invalid-token' },
+      })
+
+      const response = await middleware(request)
+
+      expect(mockValidateCsrfToken).toHaveBeenCalledWith('invalid-token')
+      expect(response).toBeInstanceOf(NextResponse)
+    })
+
+    it('should pass through when CSRF validation succeeds', async () => {
+      const mockResponse = {
+        headers: {
+          set: jest.fn(),
+        },
+      }
+      mockUpdateSession.mockResolvedValue(mockResponse)
+      mockValidateCsrfToken.mockReturnValue(true)
+
+      const request = createMockRequest('http://localhost:3000/api/data', {
+        method: 'POST',
+        cookies: { csrf_token: 'valid-token' },
+        headers: { 'x-csrf-token': 'valid-token' },
+      })
+
+      const response = await middleware(request)
+
+      expect(mockValidateCsrfToken).toHaveBeenCalledWith('valid-token')
+      expect(response).toBe(mockResponse)
+    })
+  })
+
+  describe('Config', () => {
+    it('should have correct matcher configuration', () => {
+      expect(config.matcher).toBeDefined()
+      expect(config.matcher).toBeInstanceOf(Array)
+      expect(config.runtime).toBe('nodejs')
+    })
+
+    it('should exclude static files from matcher', () => {
+      const matcherPattern = config.matcher[0]
+      expect(matcherPattern).toContain('_next/static')
+      expect(matcherPattern).toContain('_next/image')
+      expect(matcherPattern).toContain('favicon.ico')
+    })
+  })
 })

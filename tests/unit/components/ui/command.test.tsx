@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
     Command,
@@ -52,8 +52,14 @@ describe('Command Component', () => {
         const input = screen.getByPlaceholderText('Search...')
         await user.type(input, 'App')
 
-        expect(screen.getByText('Apple')).toBeInTheDocument()
-        expect(screen.queryByText('Banana')).not.toBeInTheDocument()
+        // Wait for filtering to occur
+        await waitFor(() => {
+            expect(screen.getByText('Apple')).toBeInTheDocument()
+        })
+        // Banana should be filtered out
+        await waitFor(() => {
+            expect(screen.queryByText('Banana')).not.toBeInTheDocument()
+        })
     })
 
     it('should handle item selection', async () => {

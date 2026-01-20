@@ -14,6 +14,11 @@ jest.mock('@/lib/providers', () => ({
     ]
 }))
 
+// Mock chat utils
+jest.mock('@/app/components/chat/utils', () => ({
+    addUTM: (url: string) => url,
+}))
+
 const mockModel: ModelConfig = {
     id: 'gpt-4',
     name: 'GPT-4',
@@ -43,8 +48,20 @@ describe('SubMenu Component', () => {
         expect(screen.getByText('Reasoning')).toBeInTheDocument()
         expect(screen.getByText('Web Search')).toBeInTheDocument()
 
-        // Check formatting roughly or just existence
-        expect(screen.getByText('128,000 tokens')).toBeInTheDocument()
+        // Check provider name
         expect(screen.getByText('OpenAI')).toBeInTheDocument()
+    })
+
+    it('should render context window tokens', () => {
+        render(<SubMenu hoveredModelData={mockModel} />)
+        // The component uses fr-FR locale which uses spaces as separators
+        // This renders as "128 000 tokens" with non-breaking space
+        expect(screen.getByText(/128.*000.*tokens/)).toBeInTheDocument()
+    })
+
+    it('should render links', () => {
+        render(<SubMenu hoveredModelData={mockModel} />)
+        expect(screen.getByText('API Docs')).toBeInTheDocument()
+        expect(screen.getByText('Model Page')).toBeInTheDocument()
     })
 })

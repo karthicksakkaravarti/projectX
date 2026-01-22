@@ -15,8 +15,9 @@ jest.mock('@/components/ui/toast', () => ({
 }))
 
 // Mock API helpers
+const mockGetOrCreateGuestUserId = jest.fn().mockResolvedValue('user-123')
 jest.mock('@/lib/api', () => ({
-    getOrCreateGuestUserId: jest.fn().mockResolvedValue('user-123'),
+    getOrCreateGuestUserId: (...args: unknown[]) => mockGetOrCreateGuestUserId(...args),
 }))
 
 // Mock providers
@@ -148,6 +149,7 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 describe('MultiChat Component', () => {
     beforeEach(() => {
         jest.clearAllMocks()
+        mockGetOrCreateGuestUserId.mockResolvedValue('user-123')
         // Reset window.history.pushState mock
         const pushStateSpy = jest.spyOn(window.history, 'pushState')
         pushStateSpy.mockImplementation(() => { })
@@ -426,6 +428,29 @@ describe('MultiChat Component', () => {
                     description: 'Please try again.',
                     status: 'error',
                 })
+            })
+        })
+
+        it('should not send message when getOrCreateGuestUserId returns null', async () => {
+            mockGetOrCreateGuestUserId.mockResolvedValueOnce(null)
+
+            render(
+                <Wrapper>
+                    <MultiChat />
+                </Wrapper>
+            )
+
+            const input = screen.getByTestId('chat-input')
+            await userEvent.type(input, 'Hello')
+
+            const selectModel = screen.getByTestId('select-model')
+            await userEvent.click(selectModel)
+
+            const sendButton = screen.getByTestId('send-button')
+            await userEvent.click(sendButton)
+
+            await waitFor(() => {
+                expect(mockAppend).not.toHaveBeenCalled()
             })
         })
     })

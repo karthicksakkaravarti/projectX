@@ -67,10 +67,10 @@ describe("DialogPublish", () => {
         jest.useRealTimers()
     })
 
-    it("renders nothing if Supabase is disabled", () => {
-        // We need to re-mock or use a getter for isSupabaseEnabled if it's a value
-        // Since it's mocked as a module property, we might need a different approach if it's not working
-        // For now, let's assume it works because of the mock at the top
+    it("renders nothing if chatId is null", () => {
+        ; (useChatSession as jest.Mock).mockReturnValue({ chatId: null })
+        const { container } = render(<DialogPublish />)
+        expect(container.firstChild).toBeNull()
     })
 
     it("renders the publish button when chatId exists", () => {
@@ -150,4 +150,41 @@ describe("DialogPublish", () => {
         // In our mock, both Dialog and Drawer render simple divs, but we could add assertions 
         // to check if Drawer components are used if we wanted more specific tests.
     })
+
+    it("handles publish error gracefully", async () => {
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
+        mockSupabase.single.mockResolvedValue({ data: null, error: { message: 'Database error' } })
+
+        render(<DialogPublish />)
+        fireEvent.click(screen.getByRole("button", { name: /make public/i }))
+
+        await waitFor(() => {
+            expect(consoleErrorSpy).toHaveBeenCalled()
+        })
+        
+        consoleErrorSpy.mockRestore()
+    })
+
+    it("resets copied state after timeout", async () => {
+        mockSupabase.single.mockResolvedValue({ data: { id: mockChatId }, error: null })
+        render(<DialogPublish />)
+
+        fireEvent.click(screen.getByRole("button", { name: /make public/i }))
+
+        await waitFor(() => {
+            expect(screen.getByText("Your conversation is now public!")).toBeInTheDocument()
+        })
+
+        const copyButton = screen.getAllByRole("button")[1]
+        fireEvent.click(copyButton)
+
+        // Fast forward 2 seconds to trigger the setTimeout
+        act(() => {
+            jest.advanceTimersByTime(2000)
+        })
+
+        // The copied state should be reset (Copy icon should be back)
+        expect(navigator.clipboard.writeText).toHaveBeenCalled()
+    })
+
 })

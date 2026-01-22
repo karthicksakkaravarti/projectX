@@ -74,4 +74,82 @@ describe('FileUpload Component', () => {
 
         expect(handleFiles).toHaveBeenCalled()
     })
+
+    it('should handle single file upload when multiple is false', () => {
+        const handleFiles = jest.fn()
+        render(
+            <FileUpload onFilesAdded={handleFiles} multiple={false}>
+                <FileUploadTrigger>Upload</FileUploadTrigger>
+            </FileUpload>
+        )
+
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement
+        const file1 = new File(['hello'], 'file1.png', { type: 'image/png' })
+        const file2 = new File(['world'], 'file2.png', { type: 'image/png' })
+
+        Object.defineProperty(input, 'files', {
+            value: [file1, file2],
+            writable: false
+        })
+        fireEvent.change(input)
+
+        // Should only receive first file when multiple=false
+        expect(handleFiles).toHaveBeenCalledWith([file1])
+    })
+
+    it('should handle multiple files when multiple is true', () => {
+        const handleFiles = jest.fn()
+        render(
+            <FileUpload onFilesAdded={handleFiles} multiple={true}>
+                <FileUploadTrigger>Upload</FileUploadTrigger>
+            </FileUpload>
+        )
+
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement
+        const file1 = new File(['hello'], 'file1.png', { type: 'image/png' })
+        const file2 = new File(['world'], 'file2.png', { type: 'image/png' })
+
+        Object.defineProperty(input, 'files', {
+            value: [file1, file2],
+            writable: false
+        })
+        fireEvent.change(input)
+
+        // Should receive all files when multiple=true
+        expect(handleFiles).toHaveBeenCalledWith([file1, file2])
+    })
+
+    it('should handle drag leave event', () => {
+        const handleFiles = jest.fn()
+        render(
+            <FileUpload onFilesAdded={handleFiles}>
+                <FileUploadContent>Drop Here</FileUploadContent>
+            </FileUpload>
+        )
+
+        // Trigger drag enter
+        fireEvent.dragEnter(window, {
+            dataTransfer: { items: [{ kind: 'file' }] }
+        })
+
+        expect(screen.getByText('Drop Here')).toBeInTheDocument()
+
+        // Trigger drag leave
+        fireEvent.dragLeave(window)
+
+        // Content should disappear after drag leave
+        expect(screen.queryByText('Drop Here')).not.toBeInTheDocument()
+    })
+
+    it('should render with disabled state', () => {
+        const handleFiles = jest.fn()
+        render(
+            <FileUpload onFilesAdded={handleFiles} disabled={true}>
+                <FileUploadTrigger>Upload</FileUploadTrigger>
+            </FileUpload>
+        )
+
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement
+        expect(input).toHaveAttribute('disabled')
+    })
 })

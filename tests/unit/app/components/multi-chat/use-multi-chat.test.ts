@@ -203,6 +203,52 @@ describe('useMultiChat Hook', () => {
                 status: 'error',
             })
         })
+
+        it('should not show toast when model is undefined (index out of range)', () => {
+            const models: { id: string; name: string; provider: string }[] = []
+
+            renderHook(() => useMultiChat(models))
+
+            // Get the onError callback from a hook where there's no model at that index
+            const calls = (useChat as jest.Mock).mock.calls
+            // The hook at index 5 (no model for it)
+            const onError = calls[5][0].onError
+
+            // Clear previous toast calls
+            jest.clearAllMocks()
+
+            // Simulate an error - should NOT call toast since model is undefined
+            const testError = new Error('API Error')
+            onError(testError)
+
+            expect(toast).not.toHaveBeenCalled()
+        })
+
+        it('should handle error for specific model index', () => {
+            const models = [
+                { id: 'model-0', name: 'Model 0', provider: 'test' },
+                { id: 'model-1', name: 'Model 1', provider: 'test' },
+            ]
+
+            renderHook(() => useMultiChat(models))
+
+            // Get the onError callback for second model (index 1)
+            const calls = (useChat as jest.Mock).mock.calls
+            const onError = calls[1][0].onError
+
+            // Clear previous toast calls
+            jest.clearAllMocks()
+
+            // Simulate an error for the second model
+            const testError = new Error('Second model error')
+            onError(testError)
+
+            expect(toast).toHaveBeenCalledWith({
+                title: 'Error with Model 1',
+                description: 'Second model error',
+                status: 'error',
+            })
+        })
     })
 
     describe('Re-renders and memoization', () => {

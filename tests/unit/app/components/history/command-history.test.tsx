@@ -226,4 +226,125 @@ describe("CommandHistory", () => {
 
         expect(mockTogglePinned).toHaveBeenCalledWith("1", true)
     })
+
+    it("should not render when dialog is closed", () => {
+        render(
+            <CommandHistory
+                chatHistory={mockChats}
+                onSaveEdit={mockOnSaveEdit}
+                onConfirmDelete={mockOnConfirmDelete}
+                trigger={<button>Trigger</button>}
+                isOpen={false}
+                setIsOpen={jest.fn()}
+            />
+        )
+
+        expect(screen.queryByTestId("dialog")).not.toBeInTheDocument()
+    })
+
+    it("should cancel edit when pressing cancel button", async () => {
+        render(
+            <CommandHistory
+                chatHistory={mockChats}
+                onSaveEdit={mockOnSaveEdit}
+                onConfirmDelete={mockOnConfirmDelete}
+                trigger={<button>Trigger</button>}
+                isOpen={true}
+                setIsOpen={jest.fn()}
+            />
+        )
+
+        const editButtons = screen.getAllByLabelText("Edit")
+        fireEvent.click(editButtons[0])
+
+        const cancelButton = screen.getByLabelText("Cancel")
+        fireEvent.click(cancelButton)
+
+        // Should not call save
+        expect(mockOnSaveEdit).not.toHaveBeenCalled()
+    })
+
+    it("should cancel delete when pressing cancel button", async () => {
+        render(
+            <CommandHistory
+                chatHistory={mockChats}
+                onSaveEdit={mockOnSaveEdit}
+                onConfirmDelete={mockOnConfirmDelete}
+                trigger={<button>Trigger</button>}
+                isOpen={true}
+                setIsOpen={jest.fn()}
+            />
+        )
+
+        const deleteButtons = screen.getAllByLabelText("Delete")
+        fireEvent.click(deleteButtons[0])
+
+        const cancelButton = screen.getByLabelText("Cancel")
+        fireEvent.click(cancelButton)
+
+        // Should not call delete
+        expect(mockOnConfirmDelete).not.toHaveBeenCalled()
+    })
+
+    it("should show empty state when no chats", () => {
+        render(
+            <CommandHistory
+                chatHistory={[]}
+                onSaveEdit={mockOnSaveEdit}
+                onConfirmDelete={mockOnConfirmDelete}
+                trigger={<button>Trigger</button>}
+                isOpen={true}
+                setIsOpen={jest.fn()}
+            />
+        )
+
+        expect(screen.queryByTestId("command-item")).not.toBeInTheDocument()
+    })
+
+    it("should toggle unpin for pinned chats", () => {
+        const pinnedChats = [
+            { id: "1", title: "Chat 1", updated_at: new Date().toISOString(), pinned: true },
+        ] as any
+
+        ; (useChats as jest.Mock).mockReturnValue({
+            pinnedChats: pinnedChats,
+            togglePinned: mockTogglePinned
+        })
+
+        render(
+            <CommandHistory
+                chatHistory={pinnedChats}
+                onSaveEdit={mockOnSaveEdit}
+                onConfirmDelete={mockOnConfirmDelete}
+                trigger={<button>Trigger</button>}
+                isOpen={true}
+                setIsOpen={jest.fn()}
+            />
+        )
+
+        const unpinButtons = screen.getAllByLabelText("Unpin")
+        fireEvent.click(unpinButtons[0])
+
+        expect(mockTogglePinned).toHaveBeenCalledWith("1", false)
+    })
+
+    it("should disable preview when preferences set to false", () => {
+        ; (useUserPreferences as jest.Mock).mockReturnValue({
+            preferences: { showConversationPreviews: false }
+        })
+
+        render(
+            <CommandHistory
+                chatHistory={mockChats}
+                onSaveEdit={mockOnSaveEdit}
+                onConfirmDelete={mockOnConfirmDelete}
+                trigger={<button>Trigger</button>}
+                isOpen={true}
+                setIsOpen={jest.fn()}
+            />
+        )
+
+        // Should render without preview panel or fetch should not be called on hover
+        expect(screen.getByText("Chat 1")).toBeInTheDocument()
+    })
 })

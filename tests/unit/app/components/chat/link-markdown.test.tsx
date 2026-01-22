@@ -25,6 +25,20 @@ describe('LinkMarkdown Component', () => {
             expect(screen.getByText('No link')).toBeInTheDocument()
         })
 
+        it('should render span when href is empty string', () => {
+            render(<LinkMarkdown href="">Empty href</LinkMarkdown>)
+
+            expect(screen.queryByRole('link')).not.toBeInTheDocument()
+            expect(screen.getByText('Empty href')).toBeInTheDocument()
+        })
+
+        it('should render span when href is undefined', () => {
+            render(<LinkMarkdown href={undefined}>Undefined href</LinkMarkdown>)
+
+            expect(screen.queryByRole('link')).not.toBeInTheDocument()
+            expect(screen.getByText('Undefined href')).toBeInTheDocument()
+        })
+
         it('should display domain name for valid URLs', () => {
             render(<LinkMarkdown href="https://www.example.com/page">Click</LinkMarkdown>)
 
@@ -62,10 +76,58 @@ describe('LinkMarkdown Component', () => {
             expect(screen.getByText('path')).toBeInTheDocument()
         })
 
+        it('should handle relative path with single segment', () => {
+            render(<LinkMarkdown href="/page">Link</LinkMarkdown>)
+
+            expect(screen.getByText('page')).toBeInTheDocument()
+        })
+
+        it('should handle simple relative path', () => {
+            render(<LinkMarkdown href="page">Link</LinkMarkdown>)
+
+            expect(screen.getByText('page')).toBeInTheDocument()
+        })
+
+        it('should handle empty path segments', () => {
+            render(<LinkMarkdown href="/">Link</LinkMarkdown>)
+
+            // Should fallback to href itself when split produces empty
+            const link = screen.getByRole('link')
+            expect(link).toBeInTheDocument()
+        })
+
         it('should handle subdomains', () => {
             render(<LinkMarkdown href="https://blog.example.com">Link</LinkMarkdown>)
 
             expect(screen.getByText('blog.example.com')).toBeInTheDocument()
+        })
+
+        it('should handle URLs with ports', () => {
+            render(<LinkMarkdown href="https://example.com:8080/page">Link</LinkMarkdown>)
+
+            // hostname from URL doesn't include port, so it should be just the hostname
+            expect(screen.getByText('example.com')).toBeInTheDocument()
+        })
+
+        it('should handle http URLs', () => {
+            render(<LinkMarkdown href="http://example.com">Link</LinkMarkdown>)
+
+            expect(screen.getByText('example.com')).toBeInTheDocument()
+        })
+
+        it('should handle URLs with fragments', () => {
+            render(<LinkMarkdown href="https://example.com#section">Link</LinkMarkdown>)
+
+            expect(screen.getByText('example.com')).toBeInTheDocument()
+        })
+
+        it('should encode special characters in favicon URL', () => {
+            render(<LinkMarkdown href="https://example.com/path?query=test&other=value">Link</LinkMarkdown>)
+
+            const img = screen.getByRole('img')
+            // The URL should be percent-encoded in the src attribute
+            expect(img.getAttribute('src')).toContain('example.com')
+            expect(img.getAttribute('src')).toContain('%3F') // encoded ?
         })
     })
 
@@ -77,6 +139,13 @@ describe('LinkMarkdown Component', () => {
             expect(link).toHaveClass('bg-muted')
             expect(link).toHaveClass('rounded-full')
             expect(link).toHaveClass('no-underline')
+        })
+
+        it('should apply inline-flex class', () => {
+            render(<LinkMarkdown href="https://example.com">Link</LinkMarkdown>)
+
+            const link = screen.getByRole('link')
+            expect(link).toHaveClass('inline-flex')
         })
     })
 
@@ -92,6 +161,27 @@ describe('LinkMarkdown Component', () => {
 
             const link = screen.getByRole('link')
             expect(link).toBeInTheDocument()
+        })
+
+        it('should handle multiple children', () => {
+            render(
+                <LinkMarkdown href="https://example.com">
+                    <span>First</span>
+                    <span>Second</span>
+                </LinkMarkdown>
+            )
+
+            const link = screen.getByRole('link')
+            expect(link).toBeInTheDocument()
+        })
+    })
+
+    describe('props passing', () => {
+        it('should pass additional props to span when no href', () => {
+            render(<LinkMarkdown data-testid="custom-span" className="custom-class">Text</LinkMarkdown>)
+
+            const span = screen.getByTestId('custom-span')
+            expect(span).toHaveClass('custom-class')
         })
     })
 })

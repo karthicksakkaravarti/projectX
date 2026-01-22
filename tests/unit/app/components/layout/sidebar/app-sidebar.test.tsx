@@ -13,6 +13,12 @@ import { Chat } from '@/lib/chat-store/types'
 // Mock hooks
 const mockSetOpenMobile = jest.fn()
 const mockPush = jest.fn()
+let mockIsMobile = false
+let mockChatsData = {
+    chats: [] as Chat[],
+    pinnedChats: [] as Chat[],
+    isLoading: false,
+}
 
 jest.mock('@/components/ui/sidebar', () => ({
     ...jest.requireActual('@/components/ui/sidebar'),
@@ -20,7 +26,7 @@ jest.mock('@/components/ui/sidebar', () => ({
 }))
 
 jest.mock('@/app/hooks/use-breakpoint', () => ({
-    useBreakpoint: jest.fn().mockReturnValue(false),
+    useBreakpoint: jest.fn(() => mockIsMobile),
 }))
 
 const mockChats: Chat[] = [
@@ -29,11 +35,7 @@ const mockChats: Chat[] = [
 ]
 
 jest.mock('@/lib/chat-store/chats/provider', () => ({
-    useChats: () => ({
-        chats: mockChats,
-        pinnedChats: [mockChats[1]],
-        isLoading: false,
-    }),
+    useChats: () => mockChatsData,
 }))
 
 jest.mock('next/navigation', () => ({
@@ -63,7 +65,15 @@ jest.mock('@/app/components/layout/sidebar/sidebar-project', () => ({
 }))
 
 describe('AppSidebar Component', () => {
-    beforeEach(() => jest.clearAllMocks())
+    beforeEach(() => {
+        jest.clearAllMocks()
+        mockIsMobile = false
+        mockChatsData = {
+            chats: mockChats,
+            pinnedChats: [mockChats[1]],
+            isLoading: false,
+        }
+    })
 
     const renderSidebar = () => {
         return render(
@@ -105,6 +115,35 @@ describe('AppSidebar Component', () => {
         })
     })
 
+    describe('Mobile View', () => {
+        it('should render close button on mobile', () => {
+            mockIsMobile = true
+            renderSidebar()
+            // There should be a close button with X icon
+            const buttons = screen.getAllByRole('button')
+            expect(buttons.length).toBeGreaterThan(0)
+        })
+
+        it('should call setOpenMobile(false) when close button is clicked on mobile', async () => {
+            mockIsMobile = true
+            const user = userEvent.setup()
+            renderSidebar()
+            
+            // Find and click the close button (first button in mobile view)
+            const buttons = screen.getAllByRole('button')
+            await user.click(buttons[0])
+            
+            expect(mockSetOpenMobile).toHaveBeenCalledWith(false)
+        })
+
+        it('should not render close button on desktop', () => {
+            mockIsMobile = false
+            renderSidebar()
+            // Should not have the close button visible, just the empty div
+            expect(mockSetOpenMobile).not.toHaveBeenCalled()
+        })
+    })
+
     describe('New Chat Navigation', () => {
         it('should navigate to home when New Chat is clicked', async () => {
             const user = userEvent.setup()
@@ -116,14 +155,85 @@ describe('AppSidebar Component', () => {
         })
     })
 
+    describe('Loading State', () => {
+        it('should show empty state during loading', () => {
+            mockChatsData = {
+                chats: [],
+                pinnedChats: [],
+                isLoading: true,
+            }
+            renderSidebar()
+            // When loading, just show empty div, not the chats or empty state
+            expect(screen.queryByText('No chats yet')).not.toBeInTheDocument()
+            expect(screen.queryByTestId('sidebar-list-pinned')).not.toBeInTheDocument()
+        })
+    })
+
     describe('Empty State', () => {
         it('should show empty state when no chats', () => {
-            jest.doMock('@/lib/chat-store/chats/provider', () => ({
-                useChats: () => ({ chats: [], pinnedChats: [], isLoading: false }),
-            }))
+            mockChatsData = {
+                chats: [],
+                pinnedChats: [],
+                isLoading: false,
+            }
+            renderSidebar()
+            expect(screen.getByText('No chats yet')).toBeInTheDocument()
+            expect(screen.getByText('Start a new conversation')).toBeInTheDocument()
+        })
 
-            // Note: This test may need isolation
-            // The empty state is covered when chats.length === 0
+        it('should not show empty state when chats exist', () => {
+            mockChatsData = {
+                chats: mockChats,
+                pinnedChats: [],
+                isLoading: false,
+            }
+            renderSidebar()
+            expect(screen.queryByText('No chats yet')).not.toBeInTheDocument()
+        })
+    })
+
+    describe('Pinned Chats', () => {
+        it('should render pinned section when pinned chats exist', () => {
+            mockChatsData = {
+                chats: mockChats,
+                pinnedChats: [mockChats[1]],
+                isLoading: false,
+            }
+            renderSidebar()
+            expect(screen.getByTestId('sidebar-list-pinned')).toBeInTheDocument()
+        })
+
+        it('should not render pinned section when no pinned chats', () => {
+            mockChatsData = {
+                chats: mockChats,
+                pinnedChats: [],
+                isLoading: false,
+            }
+            renderSidebar()
+            expect(screen.queryByTestId('sidebar-list-pinned')).not.toBeInTheDocument()
+        })
+    })
+
+    describe('Grouped Chats', () => {
+        it('should render grouped chats when chats exist', () => {
+            mockChatsData = {
+                chats: mockChats,
+                pinnedChats: [],
+                isLoading: false,
+            }
+            renderSidebar()
+            // Should render SidebarList for grouped chats
+            expect(screen.queryByText('No chats yet')).not.toBeInTheDocument()
+        })
+
+        it('should render both pinned and grouped chats', () => {
+            mockChatsData = {
+                chats: mockChats,
+                pinnedChats: [mockChats[1]],
+                isLoading: false,
+            }
+            renderSidebar()
+            expect(screen.getByTestId('sidebar-list-pinned')).toBeInTheDocument()
         })
     })
 })

@@ -10,8 +10,10 @@ import { SidebarProjectMenu } from '@/app/components/layout/sidebar/sidebar-proj
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Mock hooks
+let mockIsMobile = false
+
 jest.mock('@/app/hooks/use-breakpoint', () => ({
-    useBreakpoint: () => false,
+    useBreakpoint: () => mockIsMobile,
 }))
 
 // Mock fetch
@@ -49,6 +51,7 @@ describe('SidebarProjectMenu Component', () => {
 
     beforeEach(() => {
         jest.clearAllMocks()
+        mockIsMobile = false
         queryClient = new QueryClient({
             defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
         })
@@ -163,6 +166,28 @@ describe('SidebarProjectMenu Component', () => {
             await user.click(screen.getByRole('button'))
 
             expect(parentClick).not.toHaveBeenCalled()
+        })
+    })
+
+    describe('Mobile View', () => {
+        it('should use modal mode on mobile', async () => {
+            mockIsMobile = true
+            const user = userEvent.setup()
+            renderWithQueryClient(<SidebarProjectMenu {...defaultProps} />)
+
+            await user.click(screen.getByRole('button'))
+
+            await waitFor(() => expect(screen.getByRole('menu')).toBeInTheDocument())
+        })
+
+        it('should not use modal mode on desktop', async () => {
+            mockIsMobile = false
+            const user = userEvent.setup()
+            renderWithQueryClient(<SidebarProjectMenu {...defaultProps} />)
+
+            await user.click(screen.getByRole('button'))
+
+            await waitFor(() => expect(screen.getByRole('menu')).toBeInTheDocument())
         })
     })
 })

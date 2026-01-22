@@ -103,4 +103,123 @@ describe('ToolInvocation Component', () => {
             expect(screen.getByText('Result')).toBeInTheDocument()
         })
     })
+
+    describe('Edge Cases', () => {
+        it('should handle empty tool invocations array', () => {
+            render(<ToolInvocation toolInvocations={[]} />)
+            // Should render nothing or empty state
+            expect(screen.queryByText('calculator')).not.toBeInTheDocument()
+        })
+
+        it('should handle partial-call state', () => {
+            const partialCallTool = {
+                toolInvocation: {
+                    toolCallId: 'call_3',
+                    toolName: 'partial_tool',
+                    args: { input: 'test' },
+                    state: 'partial-call',
+                },
+            }
+            render(<ToolInvocation toolInvocations={[partialCallTool as any]} />)
+
+            expect(screen.getByText('partial_tool')).toBeInTheDocument()
+        })
+
+        it('should handle tool with array result', () => {
+            const arrayResultTool = {
+                toolInvocation: {
+                    toolCallId: 'call_4',
+                    toolName: 'search',
+                    args: { query: 'test' },
+                    state: 'result',
+                    result: [
+                        { url: 'https://example.com', title: 'Example', snippet: 'Test snippet' },
+                        { url: 'https://test.com', title: 'Test', snippet: 'Another snippet' },
+                    ],
+                },
+            }
+            render(<ToolInvocation toolInvocations={[arrayResultTool as any]} defaultOpen={true} />)
+
+            expect(screen.getByText('search')).toBeInTheDocument()
+        })
+
+        it('should handle tool with content result structure', () => {
+            const contentResultTool = {
+                toolInvocation: {
+                    toolCallId: 'call_5',
+                    toolName: 'content_tool',
+                    args: {},
+                    state: 'result',
+                    result: {
+                        content: [
+                            { type: 'text', text: '{"data": "parsed"}' }
+                        ]
+                    },
+                },
+            }
+            render(<ToolInvocation toolInvocations={[contentResultTool as any]} defaultOpen={true} />)
+
+            expect(screen.getByText('content_tool')).toBeInTheDocument()
+        })
+
+        it('should handle tool with no args', () => {
+            const noArgsTool = {
+                toolInvocation: {
+                    toolCallId: 'call_6',
+                    toolName: 'no_args_tool',
+                    args: null,
+                    state: 'result',
+                    result: { success: true },
+                },
+            }
+            render(<ToolInvocation toolInvocations={[noArgsTool as any]} defaultOpen={true} />)
+
+            expect(screen.getByText('no_args_tool')).toBeInTheDocument()
+        })
+
+        it('should handle duplicate tool call ids by showing most informative', () => {
+            const duplicateTools = [
+                {
+                    toolInvocation: {
+                        toolCallId: 'call_dup',
+                        toolName: 'dup_tool',
+                        args: {},
+                        state: 'call',
+                    },
+                },
+                {
+                    toolInvocation: {
+                        toolCallId: 'call_dup',
+                        toolName: 'dup_tool',
+                        args: {},
+                        state: 'result',
+                        result: { done: true },
+                    },
+                },
+            ] as any[]
+
+            render(<ToolInvocation toolInvocations={duplicateTools} defaultOpen={true} />)
+
+            // Should show completed state (result)
+            expect(screen.getByTestId('check-circle')).toBeInTheDocument()
+        })
+
+        it('should handle non-array toolInvocations input', () => {
+            // The component converts non-array to array internally
+            render(<ToolInvocation toolInvocations={mockToolInvocation as any} />)
+
+            expect(screen.getByText('calculator')).toBeInTheDocument()
+        })
+
+        it('should toggle expansion on click', () => {
+            render(<ToolInvocation toolInvocations={[mockToolInvocation as any]} defaultOpen={false} />)
+
+            // Click to expand
+            const button = screen.getByRole('button')
+            fireEvent.click(button)
+
+            // Should show Arguments after expansion
+            expect(screen.getByText('Arguments')).toBeInTheDocument()
+        })
+    })
 })

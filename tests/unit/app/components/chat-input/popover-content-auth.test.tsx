@@ -10,17 +10,21 @@ import { createClient } from '@/lib/supabase/client'
 
 // Mock dependencies
 const mockSignInWithGoogle = jest.fn()
+let mockIsSupabaseEnabled = true
+let mockCreateClient = jest.fn().mockReturnValue({
+    auth: {
+        signInWithOAuth: jest.fn(),
+    },
+})
 
 jest.mock('@/lib/supabase/config', () => ({
-    isSupabaseEnabled: true,
+    get isSupabaseEnabled() {
+        return mockIsSupabaseEnabled
+    },
 }))
 
 jest.mock('@/lib/supabase/client', () => ({
-    createClient: () => ({
-        auth: {
-            signInWithOAuth: jest.fn(),
-        },
-    }),
+    createClient: () => mockCreateClient(),
 }))
 
 jest.mock('@/lib/api', () => ({
@@ -42,6 +46,12 @@ jest.mock('@/components/ui/popover', () => ({
 describe('PopoverContentAuth Component', () => {
     beforeEach(() => {
         jest.clearAllMocks()
+        mockIsSupabaseEnabled = true
+        mockCreateClient = jest.fn().mockReturnValue({
+            auth: {
+                signInWithOAuth: jest.fn(),
+            },
+        })
         mockSignInWithGoogle.mockResolvedValue({ url: 'https://auth.google.com' })
     })
 
@@ -67,6 +77,48 @@ describe('PopoverContentAuth Component', () => {
 
         await waitFor(() => {
             expect(screen.getByText('Sign-in failed')).toBeInTheDocument()
+        })
+    })
+
+    it('should return null when Supabase is not enabled', () => {
+        mockIsSupabaseEnabled = false
+        const { container } = render(<PopoverContentAuth />)
+        expect(container.firstChild).toBeNull()
+    })
+
+    it('should handle sign-in with URL response', async () => {
+        mockSignInWithGoogle.mockResolvedValue({ url: 'https://auth.google.com/callback' })
+
+        render(<PopoverContentAuth />)
+        fireEvent.click(screen.getByText('Continue with Google'))
+
+        // Verify signInWithGoogle was called
+        await waitFor(() => {
+            expect(mockSignInWithGoogle).toHaveBeenCalled()
+        })
+    })
+
+    it('should handle sign-in without URL', async () => {
+        mockSignInWithGoogle.mockResolvedValue({ url: null })
+
+        render(<PopoverContentAuth />)
+        fireEvent.click(screen.getByText('Continue with Google'))
+
+        await waitFor(() => {
+            expect(mockSignInWithGoogle).toHaveBeenCalled()
+        })
+        // No error should be displayed
+        expect(screen.queryByText('Sign-in failed')).not.toBeInTheDocument()
+    })
+
+    it('should show default error message when error has no message', async () => {
+        mockSignInWithGoogle.mockRejectedValue({})
+
+        render(<PopoverContentAuth />)
+        fireEvent.click(screen.getByText('Continue with Google'))
+
+        await waitFor(() => {
+            expect(screen.getByText('An unexpected error occurred. Please try again.')).toBeInTheDocument()
         })
     })
 })

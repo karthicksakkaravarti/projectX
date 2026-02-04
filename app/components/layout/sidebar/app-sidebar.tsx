@@ -14,6 +14,7 @@ import { useChats } from "@/lib/chat-store/chats/provider"
 import { APP_NAME } from "@/lib/config"
 import {
   ChatTeardropText,
+  Lightbulb,
   MagnifyingGlass,
   NotePencilIcon,
   X,
@@ -90,6 +91,16 @@ export function AppSidebar() {
               }
               hasPopover={false}
             />
+            <button
+              className="hover:bg-accent/80 hover:text-foreground text-primary group/ideation relative inline-flex w-full items-center rounded-md bg-transparent px-2 py-2 text-sm transition-colors"
+              type="button"
+              onClick={() => router.push("/ideation")}
+            >
+              <div className="flex items-center gap-2">
+                <Lightbulb size={20} />
+                Idea Validator
+              </div>
+            </button>
           </div>
           <SidebarProject />
           {isLoading ? (

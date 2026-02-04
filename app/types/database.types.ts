@@ -272,6 +272,103 @@ export type Database = {
           },
         ]
       }
+      ideation_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          idea: string
+          status: "pending" | "processing" | "completed" | "failed"
+          overall_score: number | null
+          recommendation: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          idea: string
+          status?: "pending" | "processing" | "completed" | "failed"
+          overall_score?: number | null
+          recommendation?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          idea?: string
+          status?: "pending" | "processing" | "completed" | "failed"
+          overall_score?: number | null
+          recommendation?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ideation_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ideation_agent_results: {
+        Row: {
+          id: string
+          session_id: string
+          agent_type: "market_research" | "competition" | "technical_feasibility" | "uniqueness" | "monetization"
+          status: "pending" | "processing" | "completed" | "failed"
+          score: number | null
+          analysis: string | null
+          strengths: Json | null
+          weaknesses: Json | null
+          recommendations: Json | null
+          raw_response: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          agent_type: "market_research" | "competition" | "technical_feasibility" | "uniqueness" | "monetization"
+          status?: "pending" | "processing" | "completed" | "failed"
+          score?: number | null
+          analysis?: string | null
+          strengths?: Json | null
+          weaknesses?: Json | null
+          recommendations?: Json | null
+          raw_response?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          agent_type?: "market_research" | "competition" | "technical_feasibility" | "uniqueness" | "monetization"
+          status?: "pending" | "processing" | "completed" | "failed"
+          score?: number | null
+          analysis?: string | null
+          strengths?: Json | null
+          weaknesses?: Json | null
+          recommendations?: Json | null
+          raw_response?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ideation_agent_results_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ideation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_keys: {
         Row: {
           user_id: string

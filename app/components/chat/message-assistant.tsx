@@ -17,6 +17,32 @@ import { SourcesList } from "./sources-list"
 import { ToolInvocation } from "./tool-invocation"
 import { useAssistantMessageSelection } from "./useAssistantMessageSelection"
 
+function parseThinkTags(content: string): {
+  thinking: string | null
+  isThinkingComplete: boolean
+  text: string
+} {
+  // Complete <think>...</think> block
+  const completeMatch = content.match(/^<think>([\s\S]*?)<\/think>([\s\S]*)$/)
+  if (completeMatch) {
+    return {
+      thinking: completeMatch[1].trim(),
+      isThinkingComplete: true,
+      text: completeMatch[2].trim(),
+    }
+  }
+  // Incomplete/still-streaming think block
+  const incompleteMatch = content.match(/^<think>([\s\S]*)$/)
+  if (incompleteMatch) {
+    return {
+      thinking: incompleteMatch[1],
+      isThinkingComplete: false,
+      text: "",
+    }
+  }
+  return { thinking: null, isThinkingComplete: false, text: content }
+}
+
 type MessageAssistantProps = {
   children: string
   isLast?: boolean
@@ -50,7 +76,12 @@ export function MessageAssistant({
     (part) => part.type === "tool-invocation"
   )
   const reasoningParts = parts?.find((part) => part.type === "reasoning")
-  const contentNullOrEmpty = children === null || children === ""
+
+  // Parse <think>...</think> tags from content (used by DeepSeek, Qwen, etc.)
+  const { thinking, isThinkingComplete, text: parsedContent } = parseThinkTags(children ?? "")
+  const displayContent = thinking !== null ? parsedContent : (children ?? "")
+
+  const contentNullOrEmpty = displayContent === null || displayContent === ""
   const isLastStreaming = status === "streaming" && isLast
   const searchImageResults =
     parts
@@ -99,10 +130,19 @@ export function MessageAssistant({
         )}
         {...(isQuoteEnabled && { "data-message-id": messageId })}
       >
+        {/* AI SDK native reasoning parts (e.g. Claude extended thinking) */}
         {reasoningParts && reasoningParts.reasoning && (
           <Reasoning
             reasoning={reasoningParts.reasoning}
             isStreaming={status === "streaming"}
+          />
+        )}
+
+        {/* <think>...</think> tag-based reasoning (DeepSeek, Qwen, etc.) */}
+        {thinking !== null && (
+          <Reasoning
+            reasoning={thinking}
+            isStreaming={status === "streaming" && !isThinkingComplete}
           />
         )}
 
@@ -124,7 +164,7 @@ export function MessageAssistant({
             )}
             markdown={true}
           >
-            {children}
+            {displayContent}
           </MessageContent>
         )}
 

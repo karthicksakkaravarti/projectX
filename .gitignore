@@ -56,3 +56,4 @@ bun.lockb
 bun.lock
 
 /.cursor
+.env*.local

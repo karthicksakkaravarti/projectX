@@ -5,10 +5,12 @@ import { createOpenAI, openai } from "@ai-sdk/openai"
 import { createPerplexity, perplexity } from "@ai-sdk/perplexity"
 import type { LanguageModelV1 } from "@ai-sdk/provider"
 import { createXai, xai } from "@ai-sdk/xai"
+import { env } from "./env"
 import { getProviderForModel } from "./provider-map"
 import type {
   AnthropicModel,
   GeminiModel,
+  MiniMaxModel,
   MistralModel,
   OllamaModel,
   OpenAIModel,
@@ -24,6 +26,7 @@ type PerplexityProviderSettings = Parameters<typeof perplexity>[0]
 type AnthropicProviderSettings = Parameters<typeof anthropic>[1]
 type XaiProviderSettings = Parameters<typeof xai>[1]
 type OllamaProviderSettings = OpenAIChatSettings // Ollama uses OpenAI-compatible API
+type MiniMaxProviderSettings = OpenAIChatSettings // MiniMax uses OpenAI-compatible API
 
 type ModelSettings<T extends SupportedModel> = T extends OpenAIModel
   ? OpenAIChatSettings
@@ -39,7 +42,9 @@ type ModelSettings<T extends SupportedModel> = T extends OpenAIModel
             ? XaiProviderSettings
             : T extends OllamaModel
               ? OllamaProviderSettings
-              : never
+              : T extends MiniMaxModel
+                ? MiniMaxProviderSettings
+                : never
 
 export type OpenProvidersOptions<T extends SupportedModel> = ModelSettings<T>
 
@@ -63,6 +68,15 @@ const createOllamaProvider = () => {
     baseURL: getOllamaBaseURL(),
     apiKey: "ollama", // Ollama doesn't require a real API key
     name: "ollama",
+  })
+}
+
+// MiniMax exposes an OpenAI-compatible endpoint
+const createMiniMaxProvider = (apiKey: string) => {
+  return createOpenAI({
+    baseURL: "https://api.minimaxi.chat/v1",
+    apiKey,
+    name: "minimax",
   })
 }
 
@@ -153,6 +167,16 @@ export function openproviders<T extends SupportedModel>(
     return ollamaProvider(
       modelId as OllamaModel,
       settings as OllamaProviderSettings
+    )
+  }
+
+  if (provider === "minimax") {
+    const minimaxProvider = createMiniMaxProvider(
+      apiKey ?? env.MINIMAX_API_KEY
+    )
+    return minimaxProvider(
+      modelId as MiniMaxModel,
+      settings as MiniMaxProviderSettings
     )
   }
 

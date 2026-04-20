@@ -2,6 +2,7 @@
 
 import ClaudeIcon from "@/components/icons/claude"
 import GoogleIcon from "@/components/icons/google"
+import MiniMaxIcon from "@/components/icons/minimax"
 import MistralIcon from "@/components/icons/mistral"
 import OpenAIIcon from "@/components/icons/openai"
 import OpenRouterIcon from "@/components/icons/openrouter"
@@ -94,6 +95,15 @@ const PROVIDERS: Provider[] = [
     placeholder: "sk-ant-...",
     getKeyUrl: "https://console.anthropic.com/settings/keys",
     defaultKey: "sk-ant-............",
+  },
+  {
+    id: "minimax",
+    name: "MiniMax",
+    icon: MiniMaxIcon,
+    placeholder: "...",
+    getKeyUrl:
+      "https://www.minimaxi.com/en/user-center/basic-information/interface-key",
+    defaultKey: "............",
   },
 ]
 

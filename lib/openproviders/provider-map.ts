@@ -122,6 +122,13 @@ const MODEL_PROVIDER_MAP: Record<string, Provider> = {
   // Static Ollama models
   "llama3.2:latest": "ollama",
   "qwen2.5-coder:latest": "ollama",
+
+  // MiniMax
+  "MiniMax-M2.7": "minimax",
+  "MiniMax-M2.7-highspeed": "minimax",
+  "MiniMax-M2.5": "minimax",
+  "MiniMax-M2.5-highspeed": "minimax",
+  "M2-her": "minimax",
 }
 
 // Function to check if a model is likely an Ollama model based on naming patterns

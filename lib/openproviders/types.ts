@@ -112,6 +112,13 @@ export type XaiModel =
   | "grok-vision-beta"
   | "grok-beta"
 
+export type MiniMaxModel =
+  | "MiniMax-M2.7"
+  | "MiniMax-M2.7-highspeed"
+  | "MiniMax-M2.5"
+  | "MiniMax-M2.5-highspeed"
+  | "M2-her"
+
 export type OpenRouterModel =
   | "openrouter:deepseek/deepseek-r1:free"
   | "openrouter:anthropic/claude-3.7-sonnet:thinking"
@@ -136,6 +143,7 @@ export type Provider =
   | "xai"
   | "ollama"
   | "openrouter"
+  | "minimax"
 
 export type SupportedModel =
   | OpenAIModel
@@ -146,3 +154,4 @@ export type SupportedModel =
   | XaiModel
   | OllamaModel
   | OpenRouterModel
+  | MiniMaxModel

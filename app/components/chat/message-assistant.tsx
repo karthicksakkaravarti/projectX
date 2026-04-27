@@ -6,8 +6,9 @@ import {
 } from "@/components/prompt-kit/message"
 import { useUserPreferences } from "@/lib/user-preference-store/provider"
 import { cn } from "@/lib/utils"
-import type { Message as MessageAISDK } from "@ai-sdk/react"
+import type { Message as MessageAISDK } from "@/app/types/chat.types"
 import { ArrowClockwise, Check, Copy } from "@phosphor-icons/react"
+import * as React from "react"
 import { useCallback, useRef } from "react"
 import { getSources } from "./get-sources"
 import { QuoteButton } from "./quote-button"
@@ -83,6 +84,9 @@ export function MessageAssistant({
 
   const contentNullOrEmpty = displayContent === null || displayContent === ""
   const isLastStreaming = status === "streaming" && isLast
+  type ImageSearchResult = {
+    content?: Array<{ type?: string; results?: unknown[] }>
+  }
   const searchImageResults =
     parts
       ?.filter(
@@ -90,16 +94,21 @@ export function MessageAssistant({
           part.type === "tool-invocation" &&
           part.toolInvocation?.state === "result" &&
           part.toolInvocation?.toolName === "imageSearch" &&
-          part.toolInvocation?.result?.content?.[0]?.type === "images"
+          (part.toolInvocation?.result as ImageSearchResult)?.content?.[0]
+            ?.type === "images"
       )
-      .flatMap((part) =>
-        part.type === "tool-invocation" &&
-        part.toolInvocation?.state === "result" &&
-        part.toolInvocation?.toolName === "imageSearch" &&
-        part.toolInvocation?.result?.content?.[0]?.type === "images"
-          ? (part.toolInvocation?.result?.content?.[0]?.results ?? [])
-          : []
-      ) ?? []
+      .flatMap((part) => {
+        if (
+          part.type !== "tool-invocation" ||
+          part.toolInvocation?.state !== "result" ||
+          part.toolInvocation?.toolName !== "imageSearch"
+        ) {
+          return []
+        }
+        const result = part.toolInvocation?.result as ImageSearchResult
+        if (result?.content?.[0]?.type !== "images") return []
+        return result.content[0].results ?? []
+      }) ?? []
 
   const isQuoteEnabled = !preferences.multiModelEnabled
   const messageRef = useRef<HTMLDivElement>(null)
@@ -153,7 +162,9 @@ export function MessageAssistant({
           )}
 
         {searchImageResults.length > 0 && (
-          <SearchImages results={searchImageResults} />
+          <SearchImages
+            results={searchImageResults as React.ComponentProps<typeof SearchImages>["results"]}
+          />
         )}
 
         {contentNullOrEmpty ? null : (
@@ -168,7 +179,11 @@ export function MessageAssistant({
           </MessageContent>
         )}
 
-        {sources && sources.length > 0 && <SourcesList sources={sources} />}
+        {sources && sources.length > 0 && (
+          <SourcesList
+            sources={sources as React.ComponentProps<typeof SourcesList>["sources"]}
+          />
+        )}
 
         {Boolean(isLastStreaming || contentNullOrEmpty) ? null : (
           <MessageActions

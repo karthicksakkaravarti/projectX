@@ -1,184 +1,130 @@
-import { anthropic, createAnthropic } from "@ai-sdk/anthropic"
-import { createGoogleGenerativeAI, google } from "@ai-sdk/google"
-import { createMistral, mistral } from "@ai-sdk/mistral"
-import { createOpenAI, openai } from "@ai-sdk/openai"
-import { createPerplexity, perplexity } from "@ai-sdk/perplexity"
-import type { LanguageModelV1 } from "@ai-sdk/provider"
-import { createXai, xai } from "@ai-sdk/xai"
+import { ChatAnthropic } from "@langchain/anthropic"
+import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai"
+import { ChatMistralAI } from "@langchain/mistralai"
+import { ChatOllama } from "@langchain/ollama"
+import { ChatOpenAI } from "@langchain/openai"
+import { ChatXAI } from "@langchain/xai"
 import { env } from "./env"
 import { getProviderForModel } from "./provider-map"
-import type {
-  AnthropicModel,
-  GeminiModel,
-  MiniMaxModel,
-  MistralModel,
-  OllamaModel,
-  OpenAIModel,
-  PerplexityModel,
-  SupportedModel,
-  XaiModel,
-} from "./types"
+import type { SupportedModel } from "./types"
 
-type OpenAIChatSettings = Parameters<typeof openai>[1]
-type MistralProviderSettings = Parameters<typeof mistral>[1]
-type GoogleGenerativeAIProviderSettings = Parameters<typeof google>[1]
-type PerplexityProviderSettings = Parameters<typeof perplexity>[0]
-type AnthropicProviderSettings = Parameters<typeof anthropic>[1]
-type XaiProviderSettings = Parameters<typeof xai>[1]
-type OllamaProviderSettings = OpenAIChatSettings // Ollama uses OpenAI-compatible API
-type MiniMaxProviderSettings = OpenAIChatSettings // MiniMax uses OpenAI-compatible API
+export type OpenProvidersOptions<_T extends SupportedModel = SupportedModel> = {
+  enableSearch?: boolean
+  temperature?: number
+  maxTokens?: number
+}
 
-type ModelSettings<T extends SupportedModel> = T extends OpenAIModel
-  ? OpenAIChatSettings
-  : T extends MistralModel
-    ? MistralProviderSettings
-    : T extends PerplexityModel
-      ? PerplexityProviderSettings
-      : T extends GeminiModel
-        ? GoogleGenerativeAIProviderSettings
-        : T extends AnthropicModel
-          ? AnthropicProviderSettings
-          : T extends XaiModel
-            ? XaiProviderSettings
-            : T extends OllamaModel
-              ? OllamaProviderSettings
-              : T extends MiniMaxModel
-                ? MiniMaxProviderSettings
-                : never
-
-export type OpenProvidersOptions<T extends SupportedModel> = ModelSettings<T>
-
-// Get Ollama base URL from environment or use default
-const getOllamaBaseURL = () => {
+const getOllamaBaseURL = (): string => {
   if (typeof window !== "undefined") {
-    // Client-side: use localhost
-    return "http://localhost:11434/v1"
+    return "http://localhost:11434"
   }
-
-  // Server-side: check environment variables
-  return (
-    process.env.OLLAMA_BASE_URL?.replace(/\/+$/, "") + "/v1" ||
-    "http://localhost:11434/v1"
-  )
-}
-
-// Create Ollama provider instance with configurable baseURL
-const createOllamaProvider = () => {
-  return createOpenAI({
-    baseURL: getOllamaBaseURL(),
-    apiKey: "ollama", // Ollama doesn't require a real API key
-    name: "ollama",
-  })
-}
-
-// MiniMax exposes an OpenAI-compatible endpoint
-const createMiniMaxProvider = (apiKey: string) => {
-  return createOpenAI({
-    baseURL: "https://api.minimaxi.chat/v1",
-    apiKey,
-    name: "minimax",
-  })
+  const fromEnv = process.env.OLLAMA_BASE_URL?.replace(/\/+$/, "")
+  return fromEnv || "http://localhost:11434"
 }
 
 export function openproviders<T extends SupportedModel>(
   modelId: T,
   settings?: OpenProvidersOptions<T>,
   apiKey?: string
-): LanguageModelV1 {
+): BaseChatModel {
   const provider = getProviderForModel(modelId)
 
+  const temperature = settings?.temperature
+  const maxTokens = settings?.maxTokens
+
   if (provider === "openai") {
-    if (apiKey) {
-      const openaiProvider = createOpenAI({
-        apiKey,
-        compatibility: "strict",
-      })
-      return openaiProvider(
-        modelId as OpenAIModel,
-        settings as OpenAIChatSettings
-      )
-    }
-    return openai(modelId as OpenAIModel, settings as OpenAIChatSettings)
+    return new ChatOpenAI({
+      model: modelId,
+      apiKey: apiKey ?? env.OPENAI_API_KEY,
+      streaming: true,
+      temperature,
+      maxTokens,
+    })
   }
 
   if (provider === "mistral") {
-    if (apiKey) {
-      const mistralProvider = createMistral({ apiKey })
-      return mistralProvider(
-        modelId as MistralModel,
-        settings as MistralProviderSettings
-      )
-    }
-    return mistral(modelId as MistralModel, settings as MistralProviderSettings)
+    return new ChatMistralAI({
+      model: modelId,
+      apiKey: apiKey ?? env.MISTRAL_API_KEY,
+      streaming: true,
+      temperature,
+      maxTokens,
+    })
   }
 
   if (provider === "google") {
-    if (apiKey) {
-      const googleProvider = createGoogleGenerativeAI({ apiKey })
-      return googleProvider(
-        modelId as GeminiModel,
-        settings as GoogleGenerativeAIProviderSettings
-      )
-    }
-    return google(
-      modelId as GeminiModel,
-      settings as GoogleGenerativeAIProviderSettings
-    )
+    return new ChatGoogleGenerativeAI({
+      model: modelId,
+      apiKey: apiKey ?? env.GOOGLE_GENERATIVE_AI_API_KEY,
+      streaming: true,
+      temperature,
+      maxOutputTokens: maxTokens,
+    })
   }
 
   if (provider === "perplexity") {
-    if (apiKey) {
-      const perplexityProvider = createPerplexity({ apiKey })
-      return perplexityProvider(
-        modelId as PerplexityModel
-        // settings as PerplexityProviderSettings
-      )
-    }
-    return perplexity(
-      modelId as PerplexityModel
-      // settings as PerplexityProviderSettings
-    )
+    return new ChatOpenAI({
+      model: modelId,
+      apiKey: apiKey ?? env.PERPLEXITY_API_KEY,
+      streaming: true,
+      temperature,
+      maxTokens,
+      configuration: { baseURL: "https://api.perplexity.ai" },
+    })
   }
 
   if (provider === "anthropic") {
-    if (apiKey) {
-      const anthropicProvider = createAnthropic({ apiKey })
-      return anthropicProvider(
-        modelId as AnthropicModel,
-        settings as AnthropicProviderSettings
-      )
-    }
-    return anthropic(
-      modelId as AnthropicModel,
-      settings as AnthropicProviderSettings
-    )
+    return new ChatAnthropic({
+      model: modelId,
+      apiKey: apiKey ?? env.ANTHROPIC_API_KEY,
+      streaming: true,
+      temperature,
+      maxTokens,
+    })
   }
 
   if (provider === "xai") {
-    if (apiKey) {
-      const xaiProvider = createXai({ apiKey })
-      return xaiProvider(modelId as XaiModel, settings as XaiProviderSettings)
-    }
-    return xai(modelId as XaiModel, settings as XaiProviderSettings)
+    return new ChatXAI({
+      model: modelId,
+      apiKey: apiKey ?? env.XAI_API_KEY,
+      streaming: true,
+      temperature,
+      maxTokens,
+    })
   }
 
   if (provider === "ollama") {
-    const ollamaProvider = createOllamaProvider()
-    return ollamaProvider(
-      modelId as OllamaModel,
-      settings as OllamaProviderSettings
-    )
+    return new ChatOllama({
+      model: modelId,
+      baseUrl: getOllamaBaseURL(),
+      streaming: true,
+      temperature,
+    })
   }
 
   if (provider === "minimax") {
-    const minimaxProvider = createMiniMaxProvider(
-      apiKey ?? env.MINIMAX_API_KEY
-    )
-    return minimaxProvider(
-      modelId as MiniMaxModel,
-      settings as MiniMaxProviderSettings
-    )
+    return new ChatOpenAI({
+      model: modelId,
+      apiKey: apiKey ?? env.MINIMAX_API_KEY,
+      streaming: true,
+      temperature,
+      maxTokens,
+      configuration: { baseURL: "https://api.minimaxi.chat/v1" },
+    })
   }
 
-  throw new Error(`Unsupported model: ${modelId}`)
+  if (provider === "openrouter") {
+    const upstreamId = String(modelId).replace(/^openrouter:/, "")
+    return new ChatOpenAI({
+      model: upstreamId,
+      apiKey: apiKey ?? env.OPENROUTER_API_KEY,
+      streaming: true,
+      temperature,
+      maxTokens,
+      configuration: { baseURL: "https://openrouter.ai/api/v1" },
+    })
+  }
+
+  throw new Error(`Unsupported model: ${String(modelId)}`)
 }

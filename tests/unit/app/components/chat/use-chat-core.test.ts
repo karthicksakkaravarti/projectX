@@ -7,7 +7,7 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 import { useChatCore } from '@/app/components/chat/use-chat-core'
 import { toast } from '@/components/ui/toast'
 import { getOrCreateGuestUserId } from '@/lib/api'
-import { useChat } from '@ai-sdk/react'
+import { useChat } from '@/lib/chat/use-chat'
 import { MESSAGE_MAX_LENGTH } from '@/lib/config'
 
 // Mock dependencies
@@ -47,7 +47,7 @@ jest.mock('next/navigation', () => ({
 }))
 
 // Mock useChat from ai/react
-jest.mock('@ai-sdk/react', () => ({
+jest.mock('@/lib/chat/use-chat', () => ({
     useChat: jest.fn(),
 }))
 

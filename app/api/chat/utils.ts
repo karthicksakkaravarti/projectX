@@ -1,4 +1,4 @@
-import { Message as MessageAISDK } from "ai"
+import type { Message as MessageAISDK } from "@/app/types/chat.types"
 
 /**
  * Clean messages when switching between agents with different tool capabilities.

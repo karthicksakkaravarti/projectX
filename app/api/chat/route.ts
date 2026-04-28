@@ -1,21 +1,25 @@
 import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
+import { toLangChainMessages } from "@/lib/langchain/messages"
+import { makePersistHandler } from "@/lib/langchain/persist"
+import { runAgentStream } from "@/lib/langchain/stream"
 import { getAllModels } from "@/lib/models"
 import { getProviderForModel } from "@/lib/openproviders/provider-map"
 import type { ProviderWithoutOllama } from "@/lib/user-keys"
-import { Attachment } from "@ai-sdk/ui-utils"
-import { Message as MessageAISDK, streamText, ToolSet } from "ai"
+import type { Attachment } from "@/lib/file-handling"
+import type { Message } from "@/app/types/chat.types"
+import type { StructuredToolInterface } from "@langchain/core/tools"
+import { createReactAgent } from "@langchain/langgraph/prebuilt"
 import {
   incrementMessageCount,
   logUserMessage,
-  storeAssistantMessage,
   validateAndTrackUsage,
 } from "./api"
-import { createErrorResponse, extractErrorMessage } from "./utils"
+import { createErrorResponse } from "./utils"
 
 export const maxDuration = 60
 
 type ChatRequest = {
-  messages: MessageAISDK[]
+  messages: Message[]
   chatId: string
   userId: string
   model: string
@@ -53,14 +57,12 @@ export async function POST(req: Request) {
       isAuthenticated,
     })
 
-    // Increment message count for successful validation
     if (supabase) {
       await incrementMessageCount({ supabase, userId })
     }
 
     const userMessage = messages[messages.length - 1]
 
-    // If editing, delete messages from cutoff BEFORE saving the new user message
     if (supabase && editCutoffTimestamp) {
       try {
         await supabase
@@ -78,7 +80,8 @@ export async function POST(req: Request) {
         supabase,
         userId,
         chatId,
-        content: userMessage.content,
+        content:
+          typeof userMessage.content === "string" ? userMessage.content : "",
         attachments: userMessage.experimental_attachments as Attachment[],
         model,
         isAuthenticated,
@@ -104,39 +107,20 @@ export async function POST(req: Request) {
         undefined
     }
 
-    const result = streamText({
-      model: modelConfig.apiSdk(apiKey, { enableSearch }),
-      system: effectiveSystemPrompt,
-      messages: messages,
-      tools: {} as ToolSet,
-      maxSteps: 10,
-      onError: (err: unknown) => {
-        console.error("Streaming error occurred:", err)
-        // Don't set streamError anymore - let the AI SDK handle it through the stream
-      },
+    const llm = modelConfig.apiSdk(apiKey, { enableSearch })
+    const tools: StructuredToolInterface[] = []
+    const agent = createReactAgent({ llm, tools })
 
-      onFinish: async ({ response }) => {
-        if (supabase) {
-          await storeAssistantMessage({
-            supabase,
-            chatId,
-            messages:
-              response.messages as unknown as import("@/app/types/api.types").Message[],
-            message_group_id,
-            model,
-          })
-        }
-      },
+    const lcMessages = toLangChainMessages(messages, effectiveSystemPrompt)
+
+    const persist = makePersistHandler({
+      supabase: supabase ?? null,
+      chatId,
+      message_group_id,
+      model,
     })
 
-    return result.toDataStreamResponse({
-      sendReasoning: true,
-      sendSources: true,
-      getErrorMessage: (error: unknown) => {
-        console.error("Error forwarded to client:", error)
-        return extractErrorMessage(error)
-      },
-    })
+    return runAgentStream(agent, lcMessages, persist, req.signal)
   } catch (err: unknown) {
     console.error("Error in /api/chat:", err)
     const error = err as {

@@ -4,7 +4,7 @@ import {
   ChatContainerContent,
   ChatContainerRoot,
 } from "@/components/prompt-kit/chat-container"
-import { Loader } from "@/components/prompt-kit/loader"
+import { TextShimmer } from "@/components/prompt-kit/text-shimmer"
 import { ScrollButton } from "@/components/prompt-kit/scroll-button"
 import { ExtendedMessageAISDK } from "@/lib/chat-store/messages/api"
 import { getModelInfo } from "@/lib/models"
@@ -83,7 +83,9 @@ function ResponseCard({ response, group }: ResponseCardProps) {
             <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
               assistant
             </div>
-            <Loader />
+            <TextShimmer className="text-sm font-medium" duration={1.8}>
+              Thinking...
+            </TextShimmer>
           </div>
         ) : (
           <div className="text-muted-foreground text-sm italic">

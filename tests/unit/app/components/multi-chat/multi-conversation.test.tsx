@@ -16,9 +16,11 @@ jest.mock('@/components/prompt-kit/chat-container', () => ({
     ),
 }))
 
-// Mock the Loader component
-jest.mock('@/components/prompt-kit/loader', () => ({
-    Loader: () => <div data-testid="loader">Loading...</div>,
+// Mock the TextShimmer component (used in place of the legacy Loader)
+jest.mock('@/components/prompt-kit/text-shimmer', () => ({
+    TextShimmer: ({ children }: { children: React.ReactNode }) => (
+        <div data-testid="loader">{children}</div>
+    ),
 }))
 
 // Mock the ScrollButton component

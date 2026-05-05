@@ -142,14 +142,19 @@ export async function POST(req: Request) {
               .filter((s: { name: string; url: string; token?: string }) => s.url)
 
             if (servers.length > 0) {
+              console.log(
+                `[MCP] Connecting to ${servers.length} server(s):`,
+                servers.map((s: { name: string; url: string }) => `${s.name} (${s.url})`)
+              )
               const { tools: mcpTools, close } = await loadMcpTools(servers)
               tools = mcpTools
               closeMcp = close
+              console.log(`[MCP] Loaded ${tools.length} tool(s):`, tools.map((t) => t.name))
             }
           }
         }
       } catch (err) {
-        console.error("Failed to load MCP tools:", err)
+        console.error("[MCP] Failed to load MCP tools:", err)
       }
     }
 

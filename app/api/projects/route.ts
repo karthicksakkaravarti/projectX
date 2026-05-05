@@ -1,28 +1,26 @@
-import { createClient } from "@/lib/supabase/server"
+import { createGuestServerClient } from "@/lib/supabase/server-guest"
 import { NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth/require-auth"
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
+    const userId = await requireAuth(request)
 
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Missing or invalid token/session" }), {
+        status: 401,
+      })
+    }
+
+    const { name } = await request.json()
+
+    const supabase = await createGuestServerClient()
     if (!supabase) {
       return new Response(
         JSON.stringify({ error: "Supabase not available in this deployment." }),
         { status: 200 }
       )
     }
-
-    const { data: authData } = await supabase.auth.getUser()
-
-    if (!authData?.user?.id) {
-      return new Response(JSON.stringify({ error: "Missing userId" }), {
-        status: 400,
-      })
-    }
-
-    const userId = authData.user.id
-
-    const { name } = await request.json()
 
     const { data, error } = await supabase
       .from("projects")
@@ -45,8 +43,12 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
-  const supabase = await createClient()
+export async function GET(request: Request) {
+  const userId = await requireAuth(request)
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const supabase = await createGuestServerClient()
 
   if (!supabase) {
     return new Response(
@@ -54,12 +56,6 @@ export async function GET() {
       { status: 200 }
     )
   }
-
-  const { data: authData } = await supabase.auth.getUser()
-
-  const userId = authData?.user?.id
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { data, error } = await supabase
     .from("projects")

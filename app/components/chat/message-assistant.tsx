@@ -23,25 +23,32 @@ function parseThinkTags(content: string): {
   isThinkingComplete: boolean
   text: string
 } {
-  // Complete <think>...</think> block
-  const completeMatch = content.match(/^<think>([\s\S]*?)<\/think>([\s\S]*)$/)
-  if (completeMatch) {
-    return {
-      thinking: completeMatch[1].trim(),
-      isThinkingComplete: true,
-      text: completeMatch[2].trim(),
-    }
+  let text = content
+  let thinking = ""
+  let isThinkingComplete = true
+
+  // Extract all complete <think>...</think> blocks
+  const completeRegex = /<think>([\s\S]*?)<\/think>/g
+  let match
+  while ((match = completeRegex.exec(content)) !== null) {
+    thinking += (thinking ? "\n\n" : "") + match[1].trim()
   }
-  // Incomplete/still-streaming think block
-  const incompleteMatch = content.match(/^<think>([\s\S]*)$/)
+  text = text.replace(completeRegex, "")
+
+  // Check for an incomplete <think> block at the end
+  const incompleteRegex = /<think>([\s\S]*)$/
+  const incompleteMatch = text.match(incompleteRegex)
   if (incompleteMatch) {
-    return {
-      thinking: incompleteMatch[1],
-      isThinkingComplete: false,
-      text: "",
-    }
+    thinking += (thinking ? "\n\n" : "") + incompleteMatch[1]
+    text = text.replace(incompleteRegex, "")
+    isThinkingComplete = false
   }
-  return { thinking: null, isThinkingComplete: false, text: content }
+
+  return {
+    thinking: thinking.length > 0 ? thinking : null,
+    isThinkingComplete,
+    text: text.trim(),
+  }
 }
 
 type MessageAssistantProps = {

@@ -1,5 +1,6 @@
-import { createClient } from "@/lib/supabase/server"
+import { createGuestServerClient } from "@/lib/supabase/server-guest"
 import { NextRequest, NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth/require-auth"
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +8,13 @@ export async function GET(
 ) {
   try {
     const { projectId } = await params
-    const supabase = await createClient()
+    const userId = await requireAuth(request)
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const supabase = await createGuestServerClient()
 
     if (!supabase) {
       return new Response(
@@ -16,17 +23,11 @@ export async function GET(
       )
     }
 
-    const { data: authData } = await supabase.auth.getUser()
-
-    if (!authData?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     const { data, error } = await supabase
       .from("projects")
       .select("*")
       .eq("id", projectId)
-      .eq("user_id", authData.user.id)
+      .eq("user_id", userId)
       .single()
 
     if (error) {
@@ -64,7 +65,13 @@ export async function PUT(
       )
     }
 
-    const supabase = await createClient()
+    const userId = await requireAuth(request)
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const supabase = await createGuestServerClient()
 
     if (!supabase) {
       return new Response(
@@ -73,17 +80,11 @@ export async function PUT(
       )
     }
 
-    const { data: authData } = await supabase.auth.getUser()
-
-    if (!authData?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     const { data, error } = await supabase
       .from("projects")
       .update({ name: name.trim() })
       .eq("id", projectId)
-      .eq("user_id", authData.user.id)
+      .eq("user_id", userId)
       .select()
       .single()
 
@@ -113,7 +114,13 @@ export async function DELETE(
 ) {
   try {
     const { projectId } = await params
-    const supabase = await createClient()
+    const userId = await requireAuth(request)
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const supabase = await createGuestServerClient()
 
     if (!supabase) {
       return new Response(
@@ -122,18 +129,12 @@ export async function DELETE(
       )
     }
 
-    const { data: authData } = await supabase.auth.getUser()
-
-    if (!authData?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     // First verify the project exists and belongs to the user
     const { data: project, error: fetchError } = await supabase
       .from("projects")
       .select("id")
       .eq("id", projectId)
-      .eq("user_id", authData.user.id)
+      .eq("user_id", userId)
       .single()
 
     if (fetchError || !project) {
@@ -145,7 +146,7 @@ export async function DELETE(
       .from("projects")
       .delete()
       .eq("id", projectId)
-      .eq("user_id", authData.user.id)
+      .eq("user_id", userId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

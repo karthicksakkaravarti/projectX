@@ -88,7 +88,8 @@ export function runAgentStream(
   agent: Runnable<AgentInput>,
   messages: BaseMessage[],
   persist: PersistAccumulator,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  cleanup?: () => Promise<void>
 ): Response {
   const messageId =
     typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -154,6 +155,11 @@ export function runAgentStream(
         const message = extractErrorMessage(err)
         send({ type: "error", message })
       } finally {
+        try {
+          if (cleanup) await cleanup()
+        } catch (e) {
+          console.error("Error in cleanup:", e)
+        }
         controller.close()
       }
     },

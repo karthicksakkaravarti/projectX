@@ -20,7 +20,11 @@
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
     "test:all": "npm run test && npm run test:e2e",
-    "playwright:install": "playwright install"
+    "playwright:install": "playwright install",
+    "db:start": "supabase start",
+    "db:migrate": "supabase db push",
+    "db:diff": "supabase db diff -f",
+    "db:gen-types": "supabase gen types typescript --linked > app/types/database.types.ts"
   },
   "dependencies": {
     "@langchain/anthropic": "^0.3.17",

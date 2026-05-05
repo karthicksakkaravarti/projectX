@@ -131,6 +131,13 @@ export function useChatCore({
     }
   }, [prompt, setInput])
 
+  // Sync initialMessages when they become available (after async load from DB)
+  useEffect(() => {
+    if (initialMessages.length > 0 && messages.length === 0) {
+      setMessages(initialMessages)
+    }
+  }, [initialMessages, messages.length, setMessages])
+
   // Reset messages when navigating from a chat to home
   if (
     prevChatIdRef.current !== null &&

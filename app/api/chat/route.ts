@@ -8,7 +8,7 @@ import type { ProviderWithoutOllama } from "@/lib/user-keys"
 import type { Attachment } from "@/lib/file-handling"
 import type { Message } from "@/app/types/chat.types"
 import type { StructuredToolInterface } from "@langchain/core/tools"
-import { createReactAgent } from "@langchain/langgraph/prebuilt"
+import { createChatAgent } from "@/lib/agents"
 import {
   incrementMessageCount,
   logUserMessage,
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
 
     const llm = modelConfig.apiSdk(apiKey, { enableSearch })
     const tools: StructuredToolInterface[] = []
-    const agent = createReactAgent({ llm, tools })
+    const agent = createChatAgent({ llm, tools })
 
     const lcMessages = toLangChainMessages(messages, effectiveSystemPrompt)
 

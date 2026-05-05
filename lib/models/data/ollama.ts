@@ -49,17 +49,19 @@ async function detectOllamaModels(): Promise<ModelConfig[]> {
     return []
   }
 
+  const baseURL = getOllamaBaseURL()
+
   try {
-    const baseURL = getOllamaBaseURL()
     const response = await fetch(`${baseURL}/api/tags`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(2000),
     })
 
     if (!response.ok) {
-      console.warn(`Ollama not available at ${baseURL} or no models found`)
+      console.info(`Ollama not available at ${baseURL} or no models found`)
       return []
     }
 
@@ -110,7 +112,13 @@ async function detectOllamaModels(): Promise<ModelConfig[]> {
       }
     })
   } catch (error) {
-    console.warn("Failed to detect Ollama models:", error)
+    const reason =
+      error instanceof Error && "cause" in error && (error.cause as { code?: string })?.code === "ECONNREFUSED"
+        ? "connection refused (is Ollama running?)"
+        : error instanceof Error
+          ? error.message
+          : "unknown error"
+    console.info(`Ollama not reachable at ${baseURL}: ${reason}`)
     return []
   }
 }

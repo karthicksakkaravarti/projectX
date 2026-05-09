@@ -1,9 +1,10 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth/require-auth"
+import { createGuestServerClient } from "@/lib/supabase/server-guest"
 import { NextRequest, NextResponse } from "next/server"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = await createGuestServerClient()
 
     if (!supabase) {
       return NextResponse.json(
@@ -12,13 +13,8 @@ export async function GET() {
       )
     }
 
-    // Get the current user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
+    const userId = await requireAuth(request)
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -26,7 +22,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from("user_preferences")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single()
 
     if (error) {
@@ -68,7 +64,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = await createGuestServerClient()
 
     if (!supabase) {
       return NextResponse.json(
@@ -77,13 +73,8 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Get the current user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
+    const userId = await requireAuth(request)
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -131,7 +122,7 @@ export async function PUT(request: NextRequest) {
       .from("user_preferences")
       .upsert(
         {
-          user_id: user.id,
+          user_id: userId,
           ...updateData,
         },
         {

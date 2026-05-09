@@ -1,8 +1,16 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth/require-auth"
+import { createGuestServerClient } from "@/lib/supabase/server-guest"
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
+    const userId = await requireAuth(request)
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+      })
+    }
+
+    const supabase = await createGuestServerClient()
     const { chatId, model } = await request.json()
 
     if (!chatId || !model) {
@@ -22,6 +30,7 @@ export async function POST(request: Request) {
       .from("chats")
       .update({ model })
       .eq("id", chatId)
+      .eq("user_id", userId)
 
     if (error) {
       console.error("Error updating chat model:", error)

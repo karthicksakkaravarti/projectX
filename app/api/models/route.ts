@@ -4,10 +4,12 @@ import {
   getModelsWithAccessFlags,
   refreshModelsCache,
 } from "@/lib/models"
+import { requireAuth } from "@/lib/auth/require-auth"
 import { createClient } from "@/lib/supabase/server"
+import { createGuestServerClient } from "@/lib/supabase/server-guest"
 import { NextResponse } from "next/server"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createClient()
 
@@ -26,8 +28,20 @@ export async function GET() {
     }
 
     const { data: authData } = await supabase.auth.getUser()
+    let userId = authData?.user?.id ?? null
+    let keyClient = supabase
 
-    if (!authData?.user?.id) {
+    if (!userId) {
+      userId = await requireAuth(request)
+      if (userId) {
+        const guestClient = await createGuestServerClient()
+        if (guestClient) {
+          keyClient = guestClient
+        }
+      }
+    }
+
+    if (!userId) {
       const models = await getModelsWithAccessFlags()
       return new Response(JSON.stringify({ models }), {
         status: 200,
@@ -37,10 +51,10 @@ export async function GET() {
       })
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await keyClient
       .from("user_keys")
       .select("provider")
-      .eq("user_id", authData.user.id)
+      .eq("user_id", userId)
 
     if (error) {
       console.error("Error fetching user keys:", error)

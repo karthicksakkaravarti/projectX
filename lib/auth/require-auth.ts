@@ -28,6 +28,12 @@ export async function requireAuth(request: Request | NextRequest): Promise<strin
 
         return data.user_id
       }
+
+      // Try as Supabase JWT (for mobile clients)
+      const { data: userData } = await supabaseGuest.auth.getUser(bearer)
+      if (userData?.user?.id) {
+        return userData.user.id
+      }
     }
   }
 

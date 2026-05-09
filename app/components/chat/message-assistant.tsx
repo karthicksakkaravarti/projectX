@@ -6,8 +6,9 @@ import {
 } from "@/components/prompt-kit/message"
 import { useUserPreferences } from "@/lib/user-preference-store/provider"
 import { cn } from "@/lib/utils"
-import type { Message as MessageAISDK } from "@ai-sdk/react"
+import type { Message as MessageAISDK } from "@/app/types/chat.types"
 import { ArrowClockwise, Check, Copy } from "@phosphor-icons/react"
+import * as React from "react"
 import { useCallback, useRef } from "react"
 import { getSources } from "./get-sources"
 import { QuoteButton } from "./quote-button"
@@ -22,25 +23,32 @@ function parseThinkTags(content: string): {
   isThinkingComplete: boolean
   text: string
 } {
-  // Complete <think>...</think> block
-  const completeMatch = content.match(/^<think>([\s\S]*?)<\/think>([\s\S]*)$/)
-  if (completeMatch) {
-    return {
-      thinking: completeMatch[1].trim(),
-      isThinkingComplete: true,
-      text: completeMatch[2].trim(),
-    }
+  let text = content
+  let thinking = ""
+  let isThinkingComplete = true
+
+  // Extract all complete <think>...</think> blocks
+  const completeRegex = /<think>([\s\S]*?)<\/think>/g
+  let match
+  while ((match = completeRegex.exec(content)) !== null) {
+    thinking += (thinking ? "\n\n" : "") + match[1].trim()
   }
-  // Incomplete/still-streaming think block
-  const incompleteMatch = content.match(/^<think>([\s\S]*)$/)
+  text = text.replace(completeRegex, "")
+
+  // Check for an incomplete <think> block at the end
+  const incompleteRegex = /<think>([\s\S]*)$/
+  const incompleteMatch = text.match(incompleteRegex)
   if (incompleteMatch) {
-    return {
-      thinking: incompleteMatch[1],
-      isThinkingComplete: false,
-      text: "",
-    }
+    thinking += (thinking ? "\n\n" : "") + incompleteMatch[1]
+    text = text.replace(incompleteRegex, "")
+    isThinkingComplete = false
   }
-  return { thinking: null, isThinkingComplete: false, text: content }
+
+  return {
+    thinking: thinking.length > 0 ? thinking : null,
+    isThinkingComplete,
+    text: text.trim(),
+  }
 }
 
 type MessageAssistantProps = {
@@ -83,6 +91,9 @@ export function MessageAssistant({
 
   const contentNullOrEmpty = displayContent === null || displayContent === ""
   const isLastStreaming = status === "streaming" && isLast
+  type ImageSearchResult = {
+    content?: Array<{ type?: string; results?: unknown[] }>
+  }
   const searchImageResults =
     parts
       ?.filter(
@@ -90,16 +101,21 @@ export function MessageAssistant({
           part.type === "tool-invocation" &&
           part.toolInvocation?.state === "result" &&
           part.toolInvocation?.toolName === "imageSearch" &&
-          part.toolInvocation?.result?.content?.[0]?.type === "images"
+          (part.toolInvocation?.result as ImageSearchResult)?.content?.[0]
+            ?.type === "images"
       )
-      .flatMap((part) =>
-        part.type === "tool-invocation" &&
-        part.toolInvocation?.state === "result" &&
-        part.toolInvocation?.toolName === "imageSearch" &&
-        part.toolInvocation?.result?.content?.[0]?.type === "images"
-          ? (part.toolInvocation?.result?.content?.[0]?.results ?? [])
-          : []
-      ) ?? []
+      .flatMap((part) => {
+        if (
+          part.type !== "tool-invocation" ||
+          part.toolInvocation?.state !== "result" ||
+          part.toolInvocation?.toolName !== "imageSearch"
+        ) {
+          return []
+        }
+        const result = part.toolInvocation?.result as ImageSearchResult
+        if (result?.content?.[0]?.type !== "images") return []
+        return result.content[0].results ?? []
+      }) ?? []
 
   const isQuoteEnabled = !preferences.multiModelEnabled
   const messageRef = useRef<HTMLDivElement>(null)
@@ -153,7 +169,9 @@ export function MessageAssistant({
           )}
 
         {searchImageResults.length > 0 && (
-          <SearchImages results={searchImageResults} />
+          <SearchImages
+            results={searchImageResults as React.ComponentProps<typeof SearchImages>["results"]}
+          />
         )}
 
         {contentNullOrEmpty ? null : (
@@ -168,7 +186,11 @@ export function MessageAssistant({
           </MessageContent>
         )}
 
-        {sources && sources.length > 0 && <SourcesList sources={sources} />}
+        {sources && sources.length > 0 && (
+          <SourcesList
+            sources={sources as React.ComponentProps<typeof SourcesList>["sources"]}
+          />
+        )}
 
         {Boolean(isLastStreaming || contentNullOrEmpty) ? null : (
           <MessageActions

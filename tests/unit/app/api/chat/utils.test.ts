@@ -27,7 +27,7 @@ import {
     extractErrorMessage,
     createErrorResponse
 } from '@/app/api/chat/utils'
-import { Message as MessageAISDK } from 'ai'
+import type { Message as MessageAISDK } from '@/app/types/chat.types'
 
 describe('Chat API Utils', () => {
     describe('cleanMessagesForTools', () => {

@@ -7,8 +7,8 @@ import { MESSAGE_MAX_LENGTH, SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
 import { Attachment } from "@/lib/file-handling"
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import type { UserProfile } from "@/lib/user/types"
-import type { Message } from "@ai-sdk/react"
-import { useChat } from "@ai-sdk/react"
+import type { Message } from "@/app/types/chat.types"
+import { useChat } from "@/lib/chat/use-chat"
 import { useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
@@ -130,6 +130,13 @@ export function useChatCore({
       requestAnimationFrame(() => setInput(prompt))
     }
   }, [prompt, setInput])
+
+  // Sync initialMessages when they become available (after async load from DB)
+  useEffect(() => {
+    if (initialMessages.length > 0 && messages.length === 0) {
+      setMessages(initialMessages)
+    }
+  }, [initialMessages, messages.length, setMessages])
 
   // Reset messages when navigating from a chat to home
   if (

@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import type { ToolInvocationUIPart } from "@ai-sdk/ui-utils"
+import type { ToolInvocationUIPart } from "@/app/types/chat.types"
 import {
   CaretDown,
   CheckCircle,
@@ -226,9 +226,9 @@ function SingleToolCard({
         result !== null &&
         "content" in result
       ) {
-        const textContent = result.content?.find(
-          (item: { type: string }) => item.type === "text"
-        )
+        const content = (result as { content?: Array<{ type?: string; text?: string }> })
+          .content
+        const textContent = content?.find((item) => item.type === "text")
         if (!textContent?.text) return { parsedResult: null, parseError: null }
 
         try {
@@ -249,7 +249,7 @@ function SingleToolCard({
 
   // Format the arguments for display
   const formattedArgs = args
-    ? Object.entries(args).map(([key, value]) => (
+    ? Object.entries(args as Record<string, unknown>).map(([key, value]) => (
         <div key={key} className="mb-1">
           <span className="text-muted-foreground font-medium">{key}:</span>{" "}
           <span className="font-mono">
@@ -433,7 +433,10 @@ function SingleToolCard({
           >
             <div className="space-y-3 px-3 pt-3 pb-3">
               {/* Arguments section */}
-              {args && Object.keys(args).length > 0 && (
+              {args !== undefined &&
+                args !== null &&
+                typeof args === "object" &&
+                Object.keys(args as Record<string, unknown>).length > 0 && (
                 <div>
                   <div className="text-muted-foreground mb-1 text-xs font-medium">
                     Arguments

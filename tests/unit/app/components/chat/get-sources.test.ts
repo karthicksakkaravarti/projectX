@@ -3,7 +3,7 @@
  */
 
 import { getSources } from '@/app/components/chat/get-sources'
-import type { Message as MessageAISDK } from '@ai-sdk/react'
+import type { Message as MessageAISDK } from '@/app/types/chat.types'
 
 describe('getSources', () => {
     describe('Empty and null inputs', () => {

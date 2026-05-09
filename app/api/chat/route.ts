@@ -1,21 +1,31 @@
 import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
+import { decryptKey } from "@/lib/encryption"
+import { toLangChainMessages } from "@/lib/langchain/messages"
+import { loadMcpTools } from "@/lib/mcp/load-mcp-tools"
+import { makePersistHandler } from "@/lib/langchain/persist"
+import { runAgentStream } from "@/lib/langchain/stream"
+import { createClient } from "@/lib/supabase/server"
 import { getAllModels } from "@/lib/models"
 import { getProviderForModel } from "@/lib/openproviders/provider-map"
 import type { ProviderWithoutOllama } from "@/lib/user-keys"
-import { Attachment } from "@ai-sdk/ui-utils"
-import { Message as MessageAISDK, streamText, ToolSet } from "ai"
+import type { Attachment } from "@/lib/file-handling"
+import type { Message } from "@/app/types/chat.types"
+import type { StructuredToolInterface } from "@langchain/core/tools"
+import { createChatAgent } from "@/lib/agents"
 import {
   incrementMessageCount,
   logUserMessage,
-  storeAssistantMessage,
   validateAndTrackUsage,
 } from "./api"
-import { createErrorResponse, extractErrorMessage } from "./utils"
+import { createErrorResponse } from "./utils"
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnySupabase = any
 
 export const maxDuration = 60
 
 type ChatRequest = {
-  messages: MessageAISDK[]
+  messages: Message[]
   chatId: string
   userId: string
   model: string
@@ -53,14 +63,12 @@ export async function POST(req: Request) {
       isAuthenticated,
     })
 
-    // Increment message count for successful validation
     if (supabase) {
       await incrementMessageCount({ supabase, userId })
     }
 
     const userMessage = messages[messages.length - 1]
 
-    // If editing, delete messages from cutoff BEFORE saving the new user message
     if (supabase && editCutoffTimestamp) {
       try {
         await supabase
@@ -78,7 +86,8 @@ export async function POST(req: Request) {
         supabase,
         userId,
         chatId,
-        content: userMessage.content,
+        content:
+          typeof userMessage.content === "string" ? userMessage.content : "",
         attachments: userMessage.experimental_attachments as Attachment[],
         model,
         isAuthenticated,
@@ -104,39 +113,63 @@ export async function POST(req: Request) {
         undefined
     }
 
-    const result = streamText({
-      model: modelConfig.apiSdk(apiKey, { enableSearch }),
-      system: effectiveSystemPrompt,
-      messages: messages,
-      tools: {} as ToolSet,
-      maxSteps: 10,
-      onError: (err: unknown) => {
-        console.error("Streaming error occurred:", err)
-        // Don't set streamError anymore - let the AI SDK handle it through the stream
-      },
+    const llm = modelConfig.apiSdk(apiKey, { enableSearch })
+    let tools: StructuredToolInterface[] = []
+    let closeMcp: (() => Promise<void>) | undefined
 
-      onFinish: async ({ response }) => {
+    if (isAuthenticated && userId) {
+      try {
+        const supabase = await createClient()
         if (supabase) {
-          await storeAssistantMessage({
-            supabase,
-            chatId,
-            messages:
-              response.messages as unknown as import("@/app/types/api.types").Message[],
-            message_group_id,
-            model,
-          })
+          const { data: mcpRows } = await (supabase as AnySupabase)
+            .from("mcp_servers")
+            .select("name, url, encrypted_token, iv, enabled, transport")
+            .eq("user_id", userId)
+            .eq("enabled", true)
+
+          if (mcpRows && mcpRows.length > 0) {
+            const servers = mcpRows
+              .map((r: Record<string, unknown>) => ({
+                name: r.name as string,
+                url: r.url as string,
+                token: r.encrypted_token
+                  ? decryptKey(r.encrypted_token as string, r.iv as string)
+                  : undefined,
+                transport: ((r.transport as string) === "sse" ? "sse" : "http") as
+                  | "http"
+                  | "sse",
+              }))
+              .filter((s: { name: string; url: string; token?: string }) => s.url)
+
+            if (servers.length > 0) {
+              console.log(
+                `[MCP] Connecting to ${servers.length} server(s):`,
+                servers.map((s: { name: string; url: string }) => `${s.name} (${s.url})`)
+              )
+              const { tools: mcpTools, close } = await loadMcpTools(servers)
+              tools = mcpTools
+              closeMcp = close
+              console.log(`[MCP] Loaded ${tools.length} tool(s):`, tools.map((t) => t.name))
+            }
+          }
         }
-      },
+      } catch (err) {
+        console.error("[MCP] Failed to load MCP tools:", err)
+      }
+    }
+
+    const agent = createChatAgent({ llm, tools })
+
+    const lcMessages = toLangChainMessages(messages, effectiveSystemPrompt)
+
+    const persist = makePersistHandler({
+      supabase: supabase ?? null,
+      chatId,
+      message_group_id,
+      model,
     })
 
-    return result.toDataStreamResponse({
-      sendReasoning: true,
-      sendSources: true,
-      getErrorMessage: (error: unknown) => {
-        console.error("Error forwarded to client:", error)
-        return extractErrorMessage(error)
-      },
-    })
+    return runAgentStream(agent, lcMessages, persist, req.signal, closeMcp)
   } catch (err: unknown) {
     console.error("Error in /api/chat:", err)
     const error = err as {

@@ -268,7 +268,7 @@ describe('useChatOperations Hook', () => {
 
     describe('handleDelete', () => {
         it('should remove message by id', () => {
-            const messages = [{ id: '1', content: 'test', role: 'user' }]
+            const messages = [{ id: '1', content: 'test', role: 'user' as const }]
 
             const { result } = renderHook(() => useChatOperations({ ...defaultProps, messages }))
 
@@ -281,8 +281,8 @@ describe('useChatOperations Hook', () => {
 
         it('should only remove specific message', () => {
             const messages = [
-                { id: '1', content: 'first', role: 'user' },
-                { id: '2', content: 'second', role: 'assistant' }
+                { id: '1', content: 'first', role: 'user' as const },
+                { id: '2', content: 'second', role: 'assistant' as const }
             ]
 
             const { result } = renderHook(() => useChatOperations({ ...defaultProps, messages }))
@@ -292,12 +292,12 @@ describe('useChatOperations Hook', () => {
             })
 
             expect(mockSetMessages).toHaveBeenCalledWith([
-                { id: '2', content: 'second', role: 'assistant' }
+                { id: '2', content: 'second', role: 'assistant' as const }
             ])
         })
 
         it('should handle deleting non-existent message', () => {
-            const messages = [{ id: '1', content: 'test', role: 'user' }]
+            const messages = [{ id: '1', content: 'test', role: 'user' as const }]
 
             const { result } = renderHook(() => useChatOperations({ ...defaultProps, messages }))
 
@@ -311,7 +311,7 @@ describe('useChatOperations Hook', () => {
 
     describe('handleEdit', () => {
         it('should update message content', () => {
-            const messages = [{ id: '1', content: 'old', role: 'user' }]
+            const messages = [{ id: '1', content: 'old', role: 'user' as const }]
 
             const { result } = renderHook(() => useChatOperations({ ...defaultProps, messages }))
 
@@ -320,14 +320,14 @@ describe('useChatOperations Hook', () => {
             })
 
             expect(mockSetMessages).toHaveBeenCalledWith([
-                { id: '1', content: 'new', role: 'user' }
+                { id: '1', content: 'new', role: 'user' as const }
             ])
         })
 
         it('should only update specific message', () => {
             const messages = [
-                { id: '1', content: 'first', role: 'user' },
-                { id: '2', content: 'second', role: 'assistant' }
+                { id: '1', content: 'first', role: 'user' as const },
+                { id: '2', content: 'second', role: 'assistant' as const }
             ]
 
             const { result } = renderHook(() => useChatOperations({ ...defaultProps, messages }))
@@ -337,13 +337,13 @@ describe('useChatOperations Hook', () => {
             })
 
             expect(mockSetMessages).toHaveBeenCalledWith([
-                { id: '1', content: 'edited first', role: 'user' },
-                { id: '2', content: 'second', role: 'assistant' }
+                { id: '1', content: 'edited first', role: 'user' as const },
+                { id: '2', content: 'second', role: 'assistant' as const }
             ])
         })
 
         it('should not change messages when id not found', () => {
-            const messages = [{ id: '1', content: 'test', role: 'user' }]
+            const messages = [{ id: '1', content: 'test', role: 'user' as const }]
 
             const { result } = renderHook(() => useChatOperations({ ...defaultProps, messages }))
 

@@ -57,3 +57,6 @@ bun.lock
 
 /.cursor
 .env*.local
+
+
+supabase

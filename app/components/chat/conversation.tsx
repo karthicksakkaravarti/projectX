@@ -5,7 +5,7 @@ import {
 import { TextShimmer } from "@/components/prompt-kit/text-shimmer"
 import { ScrollButton } from "@/components/prompt-kit/scroll-button"
 import { ExtendedMessageAISDK } from "@/lib/chat-store/messages/api"
-import { Message as MessageType } from "@ai-sdk/react"
+import type { Message as MessageType } from "@/app/types/chat.types"
 import { useRef } from "react"
 import { Message } from "./message"
 
@@ -53,6 +53,18 @@ export function Conversation({
             const hasScrollAnchor =
               isLast && messages.length > initialMessageCount.current
 
+            const isEmptyAssistantPlaceholder =
+              message.role === "assistant" &&
+              !message.content &&
+              (message.parts?.length ?? 0) === 0
+
+            // Hide the empty assistant placeholder while we're still waiting
+            // for the first token; the "Thinking..." shimmer below stands in
+            // for it to avoid an empty bubble.
+            if (isEmptyAssistantPlaceholder && status === "submitted") {
+              return null
+            }
+
             return (
               <Message
                 key={message.id}
@@ -76,15 +88,25 @@ export function Conversation({
               </Message>
             )
           })}
-          {status === "submitted" &&
-            messages.length > 0 &&
-            messages[messages.length - 1].role === "user" && (
+          {(() => {
+            if (messages.length === 0) return null
+            const last = messages[messages.length - 1]
+            const lastIsEmptyAssistant =
+              last.role === "assistant" &&
+              !last.content &&
+              (last.parts?.length ?? 0) === 0
+            const showThinking =
+              status === "submitted" ||
+              (status === "streaming" && lastIsEmptyAssistant)
+            if (!showThinking) return null
+            return (
               <div className="group min-h-scroll-anchor flex w-full max-w-3xl flex-col items-start gap-2 px-6 pb-2">
                 <TextShimmer className="text-sm font-medium" duration={1.8}>
                   Thinking...
                 </TextShimmer>
               </div>
-            )}
+            )
+          })()}
           <div className="absolute bottom-0 flex w-full max-w-3xl flex-1 items-end justify-end gap-4 px-6 pb-2">
             <ScrollButton className="absolute top-[-50px] right-[30px]" />
           </div>

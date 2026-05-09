@@ -1,9 +1,15 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth/require-auth"
+import { createGuestServerClient } from "@/lib/supabase/server-guest"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
+    const userId = await requireAuth(request)
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const supabase = await createGuestServerClient()
     const { chatId, pinned } = await request.json()
 
     if (!chatId || typeof pinned !== "boolean") {
@@ -25,6 +31,7 @@ export async function POST(request: Request) {
       .from("chats")
       .update(toggle)
       .eq("id", chatId)
+      .eq("user_id", userId)
 
     if (error) {
       return NextResponse.json(

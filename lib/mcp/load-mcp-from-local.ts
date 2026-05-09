@@ -1,18 +1,26 @@
-import { experimental_createMCPClient as createMCPClient } from "ai"
-import { Experimental_StdioMCPTransport as StdioMCPTransport } from "ai/mcp-stdio"
+import { MultiServerMCPClient } from "@langchain/mcp-adapters"
+import type { StructuredToolInterface } from "@langchain/core/tools"
 
 export async function loadMCPToolsFromLocal(
   command: string,
   env: Record<string, string> = {}
-) {
-  const mcpClient = await createMCPClient({
-    transport: new StdioMCPTransport({
-      command,
-      args: ["stdio"],
-      env,
-    }),
+): Promise<{ tools: StructuredToolInterface[]; close: () => Promise<void> }> {
+  const client = new MultiServerMCPClient({
+    mcpServers: {
+      local: {
+        transport: "stdio",
+        command,
+        args: ["stdio"],
+        env,
+      },
+    },
   })
 
-  const tools = await mcpClient.tools()
-  return { tools, close: () => mcpClient.close() }
+  const tools = await client.getTools()
+  return {
+    tools,
+    close: async () => {
+      await client.close()
+    },
+  }
 }

@@ -14,7 +14,7 @@ jest.mock('@/components/ui/toast', () => ({
 const mockAppend = jest.fn()
 const mockStop = jest.fn()
 
-jest.mock('@ai-sdk/react', () => ({
+jest.mock('@/lib/chat/use-chat', () => ({
     useChat: jest.fn(() => ({
         messages: [],
         isLoading: false,
@@ -23,7 +23,7 @@ jest.mock('@ai-sdk/react', () => ({
     })),
 }))
 
-import { useChat } from '@ai-sdk/react'
+import { useChat } from '@/lib/chat/use-chat'
 import { toast } from '@/components/ui/toast'
 
 describe('useMultiChat Hook', () => {

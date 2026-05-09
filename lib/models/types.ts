@@ -1,4 +1,4 @@
-import { LanguageModelV1 } from "ai"
+import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 
 type ModelConfig = {
   id: string // "gpt-4.1-nano" // same from AI SDKs
@@ -33,11 +33,10 @@ type ModelConfig = {
 
   icon?: string // e.g. "gpt-4", "claude", "mistral", or custom string
 
-  // apiSdk?: () => LanguageModelV1 // "openai("gpt-4.1-nano")"
   apiSdk?: (
     apiKey?: string,
     opts?: { enableSearch?: boolean }
-  ) => LanguageModelV1
+  ) => BaseChatModel
 
   accessible?: boolean // true if the model is accessible to the user
 }

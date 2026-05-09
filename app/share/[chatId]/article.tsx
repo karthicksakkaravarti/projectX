@@ -4,9 +4,10 @@ import type { Tables } from "@/app/types/database.types"
 import { Message, MessageContent } from "@/components/prompt-kit/message"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { Message as MessageAISDK } from "@ai-sdk/react"
+import type { Message as MessageAISDK } from "@/app/types/chat.types"
 import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr"
 import Link from "next/link"
+import type * as React from "react"
 import { Header } from "./header"
 
 type MessageType = Tables<"messages">
@@ -62,7 +63,7 @@ export default function Article({
         </div>
         <div className="mt-20 w-full">
           {messages.map((message) => {
-            const parts = message?.parts as MessageAISDK["parts"]
+            const parts = message?.parts as unknown as MessageAISDK["parts"]
             const sources = getSources(parts)
 
             return (
@@ -88,7 +89,11 @@ export default function Article({
                   </MessageContent>
                 </Message>
                 {sources && sources.length > 0 && (
-                  <SourcesList sources={sources} />
+                  <SourcesList
+                    sources={
+                      sources as React.ComponentProps<typeof SourcesList>["sources"]
+                    }
+                  />
                 )}
               </div>
             )

@@ -1,4 +1,4 @@
-import type { Message as MessageAISDK } from "@ai-sdk/react"
+import type { Message as MessageAISDK } from "@/app/types/chat.types"
 
 export function getSources(parts: MessageAISDK["parts"]) {
   const sources = parts
@@ -14,13 +14,21 @@ export function getSources(parts: MessageAISDK["parts"]) {
         part.type === "tool-invocation" &&
         part.toolInvocation.state === "result"
       ) {
-        const result = part.toolInvocation.result
+        const result = part.toolInvocation.result as
+          | {
+              result?: Array<{ citations?: unknown[] }>
+            }
+          | unknown[]
+          | unknown
 
         if (
           part.toolInvocation.toolName === "summarizeSources" &&
-          result?.result?.[0]?.citations
+          (result as { result?: Array<{ citations?: unknown[] }> })?.result?.[0]
+            ?.citations
         ) {
-          return result.result.flatMap((item: { citations?: unknown[] }) => item.citations || [])
+          return (
+            result as { result: Array<{ citations?: unknown[] }> }
+          ).result.flatMap((item) => item.citations || [])
         }
 
         return Array.isArray(result) ? result.flat() : result
@@ -32,9 +40,12 @@ export function getSources(parts: MessageAISDK["parts"]) {
     .flat()
 
   const validSources =
-    sources?.filter(
+    (sources as Array<{ url?: string } | null | undefined>)?.filter(
       (source) =>
-        source && typeof source === "object" && source.url && source.url !== ""
+        !!source &&
+        typeof source === "object" &&
+        !!source.url &&
+        source.url !== ""
     ) || []
 
   return validSources

@@ -1,5 +1,5 @@
 import type { Database, Json } from "@/app/types/database.types"
-import type { Attachment } from "@ai-sdk/ui-utils"
+import type { Attachment } from "@/lib/file-handling"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export type SupabaseClientType = SupabaseClient<Database>
@@ -13,7 +13,7 @@ export interface ContentPart {
   result?: Json
   toolInvocation?: {
     state: string
-    step: number
+    step?: number
     toolCallId: string
     toolName: string
     args?: Json

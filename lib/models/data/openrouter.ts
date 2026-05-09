@@ -1,4 +1,4 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import { openproviders } from "@/lib/openproviders"
 import { ModelConfig } from "../types"
 
 export const openrouterModels: ModelConfig[] = [
@@ -30,9 +30,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2024-04-01",
     icon: "mistralai",
     apiSdk: (apiKey?: string) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-      }).chat("mistralai/devstral-2512:free"),
+      openproviders("openrouter:mistralai/devstral-2512:free", undefined, apiKey),
   },
   {
     id: "openrouter:xiaomi/mimo-v2-flash:free",
@@ -62,9 +60,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2024-04-01",
     icon: "xiaomi",
     apiSdk: (apiKey?: string) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-      }).chat("xiaomi/mimo-v2-flash:free"),
+      openproviders("openrouter:xiaomi/mimo-v2-flash:free", undefined, apiKey),
   },
   {
     id: "openrouter:deepseek/deepseek-r1:free",
@@ -94,9 +90,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2024-04-01",
     icon: "deepseek",
     apiSdk: (apiKey?: string) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-      }).chat("deepseek/deepseek-r1:free"),
+      openproviders("openrouter:deepseek/deepseek-r1:free", undefined, apiKey),
   },
   {
     id: "openrouter:anthropic/claude-sonnet-4",
@@ -126,14 +120,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-04-01",
     icon: "claude",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("anthropic/claude-sonnet-4"),
+      openproviders("openrouter:anthropic/claude-sonnet-4", undefined, apiKey),
   },
   {
     id: "openrouter:anthropic/claude-3.7-sonnet:thinking",
@@ -163,14 +150,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-02-24",
     icon: "claude",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("anthropic/claude-3.7-sonnet:thinking"),
+      openproviders("openrouter:anthropic/claude-3.7-sonnet:thinking", undefined, apiKey),
   },
   {
     id: "openrouter:google/gemini-2.5-pro-preview",
@@ -200,14 +180,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-03-20",
     icon: "gemini",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("google/gemini-2.5-pro-preview"),
+      openproviders("openrouter:google/gemini-2.5-pro-preview", undefined, apiKey),
   },
   {
     id: "openrouter:openai/gpt-4.1",
@@ -237,14 +210,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-04-14",
     icon: "openai",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("openai/gpt-4.1"),
+      openproviders("openrouter:openai/gpt-4.1", undefined, apiKey),
   },
   {
     id: "openrouter:openai/o4-mini",
@@ -274,14 +240,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-04-01",
     icon: "openai",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("openai/o4-mini"),
+      openproviders("openrouter:openai/o4-mini", undefined, apiKey),
   },
   {
     id: "openrouter:x-ai/grok-3-mini-beta",
@@ -311,14 +270,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-02-15",
     icon: "xai",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("x-ai/grok-3-mini-beta"),
+      openproviders("openrouter:x-ai/grok-3-mini-beta", undefined, apiKey),
   },
   {
     id: "openrouter:google/gemini-2.5-flash-preview-05-20",
@@ -348,14 +300,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-03-25",
     icon: "gemini",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("google/gemini-2.5-flash-preview-05-20"),
+      openproviders("openrouter:google/gemini-2.5-flash-preview-05-20", undefined, apiKey),
   },
   {
     id: "openrouter:meta-llama/llama-3.3-8b-instruct:free",
@@ -385,14 +330,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-04-01",
     icon: "meta",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("meta-llama/llama-3.3-8b-instruct:free"),
+      openproviders("openrouter:meta-llama/llama-3.3-8b-instruct:free", undefined, apiKey),
   },
   {
     id: "openrouter:openai/gpt-4.1-mini",
@@ -422,14 +360,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-04-14",
     icon: "openai",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("openai/gpt-4.1-mini"),
+      openproviders("openrouter:openai/gpt-4.1-mini", undefined, apiKey),
   },
   {
     id: "openrouter:openai/gpt-4.1-nano",
@@ -459,14 +390,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-04-14",
     icon: "openai",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("openai/gpt-4.1-nano"),
+      openproviders("openrouter:openai/gpt-4.1-nano", undefined, apiKey),
   },
   {
     id: "openrouter:openai/o3-mini",
@@ -496,12 +420,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-04-01",
     icon: "openai",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          plugins: [{ id: "web", max_results: 3 }],
-        }),
-      }).chat("openai/o3-mini"),
+      openproviders("openrouter:openai/o3-mini", undefined, apiKey),
   },
   {
     id: "openrouter:anthropic/claude-3.5-sonnet",
@@ -531,12 +450,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2024-10-22",
     icon: "claude",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          plugins: [{ id: "web", max_results: 3 }],
-        }),
-      }).chat("anthropic/claude-3.5-sonnet"),
+      openproviders("openrouter:anthropic/claude-3.5-sonnet", undefined, apiKey),
   },
   {
     id: "openrouter:google/gemini-2.0-flash-001",
@@ -566,12 +480,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2024-12-11",
     icon: "gemini",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          plugins: [{ id: "web", max_results: 3 }],
-        }),
-      }).chat("google/gemini-2.0-flash-001"),
+      openproviders("openrouter:google/gemini-2.0-flash-001", undefined, apiKey),
   },
   {
     id: "openrouter:google/gemini-2.0-flash-lite-001",
@@ -601,12 +510,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2024-12-11",
     icon: "gemini",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          plugins: [{ id: "web", max_results: 3 }],
-        }),
-      }).chat("google/gemini-2.0-flash-lite-001"),
+      openproviders("openrouter:google/gemini-2.0-flash-lite-001", undefined, apiKey),
   },
   {
     id: "openrouter:openai/gpt-4.5-preview",
@@ -636,12 +540,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-05-01",
     icon: "openai",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          plugins: [{ id: "web", max_results: 3 }],
-        }),
-      }).chat("openai/gpt-4.5-preview"),
+      openproviders("openrouter:openai/gpt-4.5-preview", undefined, apiKey),
   },
   {
     id: "openrouter:perplexity/sonar",
@@ -671,12 +570,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-01-27",
     icon: "perplexity",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          plugins: [{ id: "web", max_results: 3 }],
-        }),
-      }).chat("perplexity/sonar"),
+      openproviders("openrouter:perplexity/sonar", undefined, apiKey),
   },
   {
     id: "openrouter:perplexity/sonar-reasoning",
@@ -706,14 +600,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-01-29",
     icon: "perplexity",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("perplexity/sonar-reasoning"),
+      openproviders("openrouter:perplexity/sonar-reasoning", undefined, apiKey),
   },
   {
     id: "openrouter:perplexity/sonar-reasoning-pro",
@@ -743,14 +630,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-07-25",
     icon: "perplexity",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("perplexity/sonar-reasoning-pro"),
+      openproviders("openrouter:perplexity/sonar-reasoning-pro", undefined, apiKey),
   },
   {
     id: "openrouter:perplexity/sonar-pro",
@@ -780,14 +660,7 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-03-27",
     icon: "perplexity",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("perplexity/sonar-pro"),
+      openproviders("openrouter:perplexity/sonar-pro", undefined, apiKey),
   },
   {
     id: "openrouter:perplexity/sonar-deep-research",
@@ -817,13 +690,6 @@ export const openrouterModels: ModelConfig[] = [
     releasedAt: "2025-03-07",
     icon: "perplexity",
     apiSdk: (apiKey?: string, opts?: { enableSearch?: boolean }) =>
-      createOpenRouter({
-        apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-        ...(opts?.enableSearch && {
-          extraBody: {
-            plugins: [{ id: "web", max_results: 3 }],
-          },
-        }),
-      }).chat("perplexity/sonar-deep-research"),
+      openproviders("openrouter:perplexity/sonar-deep-research", undefined, apiKey),
   },
 ]

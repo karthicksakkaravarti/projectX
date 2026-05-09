@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { isSupabaseEnabled } from "@/lib/supabase/config"
-import type { Message as MessageAISDK } from "ai"
+import type { Message as MessageAISDK } from "@/app/types/chat.types"
 import { readFromIndexedDB, writeToIndexedDB } from "../persist"
 
 export interface ExtendedMessageAISDK extends MessageAISDK {
@@ -38,7 +38,7 @@ export async function getMessagesFromDb(
     id: String(message.id),
     content: message.content ?? "",
     createdAt: new Date(message.created_at || ""),
-    parts: (message?.parts as MessageAISDK["parts"]) || undefined,
+    parts: (message?.parts as unknown as MessageAISDK["parts"]) || undefined,
     message_group_id: message.message_group_id,
     model: message.model,
   }))
@@ -76,10 +76,17 @@ export async function getLastMessagesFromDb(
     id: String(message.id),
     content: message.content ?? "",
     createdAt: new Date(message.created_at || ""),
-    parts: (message?.parts as MessageAISDK["parts"]) || undefined,
+    parts: (message?.parts as unknown as MessageAISDK["parts"]) || undefined,
     message_group_id: message.message_group_id,
     model: message.model,
   }))
+}
+
+type DbRole = "user" | "assistant" | "system" | "data"
+
+function toDbRole(role: ExtendedMessageAISDK["role"]): DbRole {
+  if (role === "tool" || role === "tool-call") return "data"
+  return role as DbRole
 }
 
 async function insertMessageToDb(
@@ -91,7 +98,7 @@ async function insertMessageToDb(
 
   await supabase.from("messages").insert({
     chat_id: chatId,
-    role: message.role,
+    role: toDbRole(message.role),
     content: message.content,
     experimental_attachments: message.experimental_attachments,
     created_at: message.createdAt?.toISOString() || new Date().toISOString(),
@@ -109,7 +116,7 @@ async function insertMessagesToDb(
 
   const payload = messages.map((message) => ({
     chat_id: chatId,
-    role: message.role,
+    role: toDbRole(message.role),
     content: message.content,
     experimental_attachments: message.experimental_attachments,
     created_at: message.createdAt?.toISOString() || new Date().toISOString(),
